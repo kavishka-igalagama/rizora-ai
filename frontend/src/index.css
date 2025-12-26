@@ -72,3 +72,15 @@
 @utility animate-fade-in {
   animation: fade-in 0.6s ease-out both;
 }
+
+@layer components {
+  .dot-pattern {
+    background-image: radial-gradient(hsl(150 15% 80%) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .grid-pattern {
+    background-image: linear-gradient(hsl(150 15% 90%) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(150 15% 90%) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}

@@ -133,10 +133,9 @@ const HomePage = () => {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden bg-linear-to-br from-muted via-muted to-background">
         {/* Background effects */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(32,194,98,0.15),rgba(255,255,255,0))]" />
-        <div className="absolute top-32 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-10 right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float-slow" />
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-linear-to-br from-green-100 via-emerald-50 to-sky-100" />
+        <div className="absolute top-24 left-24 w-72 h-72 bg-green-400/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-24 right-24 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl animate-float-slow" />
 
         <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center py-12 lg:py-20">
@@ -146,9 +145,9 @@ const HomePage = () => {
                 className="opacity-0 animate-fade-in"
                 style={{ animationDelay: "0.1s" }}
               >
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-background rounded-full border border-border hover:border-primary transition-colors">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full border border-primary/30 hover:bg-primary/20 transition-colors">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-sm font-semibold text-primary">
                     AI-Powered Agricultural Technology
                   </span>
                 </div>
@@ -243,7 +242,8 @@ const HomePage = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 relative bg-muted">
+      <section className="py-24 relative bg-primary-foreground/70">
+        <div className="absolute inset-0 dot-pattern opacity-50" />
         <div className="container mx-auto px-4 sm:px-6 relative">
           <div className="text-center mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-primary bg-background rounded-full border border-border">
@@ -301,6 +301,7 @@ const HomePage = () => {
 
       {/* Benefits Section */}
       <section className="py-24 relative overflow-hidden bg-card">
+        <div className="absolute top-20 right-18 w-80 h-80 bg-green-400/10 rounded-full blur-3xl animate-float" />
         <div className="container mx-auto px-4 sm:px-6 relative">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
@@ -322,8 +323,8 @@ const HomePage = () => {
                     key={index}
                     className="flex items-start gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all group border border-border/50"
                   >
-                    <div className="w-6 h-6 rounded-full bg-gradient-primary flex items-center justify-center shrink-0 shadow-medium flex-none mt-0.5">
-                      <CheckCircle className="w-4 h-4 text-primary-foreground" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center shrink-0 shadow-medium flex-none mt-0.5">
+                      <CheckCircle className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <span className="text-foreground font-medium">
                       {benefit}
@@ -333,10 +334,10 @@ const HomePage = () => {
               </div>
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-primary text-primary-foreground px-8 py-4 rounded-2xl font-semibold hover:bg-gradient-primary-dark hover:shadow-strong hover:-translate-y-1 active:translate-y-0 transition-all duration-300 w-fit group"
+                className="inline-flex items-center text-sm justify-center gap-2 bg-gradient-primary text-primary-foreground px-8 py-5 rounded-2xl font-semibold hover:bg-gradient-primary-dark hover:shadow-strong hover:-translate-y-1 active:translate-y-0 transition-all duration-300 w-fit group"
               >
                 Start Your Free Trial
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-5 h-5 text-sm group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
@@ -363,7 +364,8 @@ const HomePage = () => {
       </section>
 
       {/* User Types Section */}
-      <section className="py-24 bg-muted relative">
+      <section className="py-24 bg-primary-foreground/70 relative">
+        <div className="absolute inset-0 grid-pattern opacity-30" />
         <div className="container mx-auto px-4 sm:px-6 relative">
           <div className="text-center mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-primary bg-background rounded-full border border-border">
@@ -412,6 +414,7 @@ const HomePage = () => {
 
       {/* Testimonials Section */}
       <section className="py-24 relative overflow-hidden bg-card">
+        <div className="absolute top-80 left-16 w-96 h-96 bg-green-400/10 rounded-full blur-3xl animate-float" />
         <div className="container mx-auto px-4 sm:px-6 relative">
           <div className="text-center mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-primary bg-background rounded-full border border-border">
@@ -458,7 +461,7 @@ const HomePage = () => {
       {/* CTA Section */}
       <section className="py-24 relative">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="relative rounded-3xl overflow-hidden border-0 bg-gradient-primary shadow-strong">
+          <div className="relative rounded-2xl overflow-hidden border-0 bg-gradient-primary shadow-strong">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNCAxNCA2LjI2OCAxNCAyOS0xNC0xNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-20" />
             <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-white/20 rounded-full blur-3xl" />
             <div className="absolute -bottom-1/2 -left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
@@ -473,14 +476,14 @@ const HomePage = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 <Link
                   to="/register"
-                  className="inline-flex items-center justify-center h-14 rounded-2xl gap-2 px-8 bg-primary-foreground text-base font-semibold text-primary hover:bg-white/90 hover:shadow-strong hover:-translate-y-1 active:translate-y-0 transition-all duration-300 shadow-medium"
+                  className="inline-flex items-center justify-center h-14 rounded-2xl gap-2 px-8 bg-primary-foreground text-sm font-semibold text-primary hover:bg-white/90 hover:shadow-strong hover:-translate-y-1 active:translate-y-0 transition-all duration-300 shadow-medium"
                 >
                   Get Started Now
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
                   to="/contact"
-                  className="inline-flex items-center justify-center h-14 px-8 rounded-2xl text-base font-semibold border-2 border-white/40 text-white hover:bg-white/10 hover:border-white hover:shadow-medium transition-all duration-300"
+                  className="inline-flex items-center justify-center h-14 px-8 rounded-2xl text-sm font-semibold border-2 border-white/40 text-white hover:bg-white/10 hover:border-white hover:shadow-medium transition-all duration-300"
                 >
                   Contact Sales
                 </Link>
