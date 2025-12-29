@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -75,22 +76,26 @@ const Navbar = () => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden lg:flex items-center gap-3">
-            <Button
-              variant="ghost"
-              asChild
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Link href="/login">Sign In</Link>
-            </Button>
-            <Button
-              asChild
-              className="bg-linear-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg hover:shadow-glow transition-all duration-300"
-            >
-              <Link href="/register" className="flex items-center gap-2">
-                Get Started
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </Button>
+            <SignInButton mode="modal">
+              <Button
+                variant="ghost"
+                asChild
+                className="text-muted-foreground border-2 border-muted-foreground/60 hover:text-foreground cursor-pointer"
+              >
+                <div>Sign In</div>
+              </Button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <Button
+                asChild
+                className="bg-linear-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg hover:shadow-glow transition-all duration-300 cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  Get Started
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </Button>
+            </SignUpButton>
           </div>
 
           {/* Mobile Menu Button */}
@@ -133,26 +138,25 @@ const Navbar = () => {
               ))}
               <div className="h-px bg-border my-3" />
               <div className="flex flex-col gap-2 px-2">
-                <Button
-                  variant="outline"
-                  asChild
-                  className="w-full justify-center"
-                >
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                    Sign In
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  className="w-full justify-center bg-linear-to-r from-primary to-emerald-600"
-                >
-                  <Link
-                    href="/register"
-                    onClick={() => setMobileMenuOpen(false)}
+                <SignInButton mode="modal">
+                  <Button
+                    variant="outline"
+                    asChild
+                    className="w-full justify-center hover:text-primary"
                   >
-                    Get Started
-                  </Link>
-                </Button>
+                    <div onClick={() => setMobileMenuOpen(false)}>Sign In</div>
+                  </Button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <Button
+                    asChild
+                    className="w-full justify-center bg-linear-to-r from-primary to-emerald-600"
+                  >
+                    <div onClick={() => setMobileMenuOpen(false)}>
+                      Get Started
+                    </div>
+                  </Button>
+                </SignUpButton>
               </div>
             </div>
           </div>

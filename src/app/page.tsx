@@ -25,6 +25,7 @@ import farmIcon from "@public/farm-management-icon.jpg";
 import marketIcon from "@public/market-price-icon.jpg";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { SignUpButton } from "@clerk/nextjs";
 
 export default function Home() {
   const features = [
@@ -178,16 +179,18 @@ export default function Home() {
                 className="flex flex-col sm:flex-row gap-4 animate-fade-in"
                 style={{ animationDelay: "0.4s" }}
               >
-                <Button
-                  size="lg"
-                  asChild
-                  className="h-14 px-8 text-base bg-linear-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-xl hover:shadow-glow transition-all duration-300 group"
-                >
-                  <Link href="/register">
-                    Get Started Free
-                    <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
+                <SignUpButton mode="modal">
+                  <Button
+                    size="lg"
+                    asChild
+                    className="h-14 px-8 text-base bg-linear-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-xl hover:shadow-glow transition-all duration-300 group cursor-pointer"
+                  >
+                    <div>
+                      Get Started Free
+                      <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </Button>
+                </SignUpButton>
                 <Button
                   size="lg"
                   variant="outline"
@@ -392,13 +395,15 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <Button
-                size="lg"
-                asChild
-                className="h-14 px-8 bg-linear-to-r from-primary to-emerald-600 shadow-lg hover:shadow-glow transition-all duration-300"
-              >
-                <Link href="/register">Start Your Free Trial</Link>
-              </Button>
+              <SignUpButton mode="modal">
+                <Button
+                  size="lg"
+                  asChild
+                  className="h-14 px-8 bg-linear-to-r from-primary to-emerald-600 shadow-lg hover:shadow-glow transition-all duration-300 cursor-pointer"
+                >
+                  <div>Start Your Free Trial</div>
+                </Button>
+              </SignUpButton>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -538,16 +543,18 @@ export default function Home() {
                 Start for free, upgrade when you're ready.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Button
-                  size="lg"
-                  asChild
-                  className="h-14 px-8 bg-white text-primary hover:bg-white/90 shadow-xl"
-                >
-                  <Link href="/register" className="flex items-center gap-2">
-                    Get Started Now
-                    <ArrowRight className="w-5 h-5" />
-                  </Link>
-                </Button>
+                <SignUpButton mode="modal">
+                  <Button
+                    size="lg"
+                    asChild
+                    className="h-14 px-8 bg-white text-primary hover:bg-white/90 shadow-xl cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      Get Started Now
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                  </Button>
+                </SignUpButton>
                 <Button
                   size="lg"
                   variant="outline"
