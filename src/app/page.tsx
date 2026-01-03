@@ -26,8 +26,14 @@ import marketIcon from "@public/market-price-icon.jpg";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SignUpButton } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function Home() {
+  const user = await currentUser();
+
+  if (user) redirect("/dashboard");
+
   const features = [
     {
       icon: Microscope,
