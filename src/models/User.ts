@@ -6,7 +6,13 @@ export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
   role?: "farmer" | "mill" | "officer" | "none";
-  distict?: string;
+  district?: string;
+  nic?: string;
+  phone?: string;
+  millName?: string;
+  registrationNumber?: string;
+  address?: string;
+  onboardingCompleted?: boolean;
   imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -37,8 +43,27 @@ const UserSchema: Schema<IUser> = new Schema(
       enum: ["farmer", "mill", "officer", "none"],
       default: "none",
     },
-    distict: {
+    district: {
       type: String,
+    },
+    nic: {
+      type: String,
+    },
+    phone: {
+      type: String,
+    },
+    millName: {
+      type: String,
+    },
+    registrationNumber: {
+      type: String,
+    },
+    address: {
+      type: String,
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
     },
     imageUrl: {
       type: String,
