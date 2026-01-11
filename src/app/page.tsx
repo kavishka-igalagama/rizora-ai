@@ -29,10 +29,10 @@ import { SignUpButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-export default async function Home() {
-  const user = await currentUser();
+const HomePage = async () => {
+  const authUser = await currentUser();
 
-  if (user) redirect("/dashboard");
+  if (authUser) redirect("/dashboard");
 
   const features = [
     {
@@ -554,4 +554,6 @@ export default async function Home() {
       <Footer />
     </div>
   );
-}
+};
+
+export default HomePage;

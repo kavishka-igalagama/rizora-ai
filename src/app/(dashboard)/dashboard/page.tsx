@@ -31,7 +31,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
 
-const FarmerDashboard = async () => {
+const FarmerDashboardPage = async () => {
   const authUser = await currentUser();
 
   if (!authUser) {
@@ -403,4 +403,4 @@ const FarmerDashboard = async () => {
   );
 };
 
-export default FarmerDashboard;
+export default FarmerDashboardPage;
