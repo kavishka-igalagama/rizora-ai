@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,8 +27,24 @@ import {
   BarChart3,
 } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
+import connectDB from "@/lib/mongodb";
+import User from "@/models/User";
 
-const FarmerDashboard = () => {
+const FarmerDashboardPage = async () => {
+  const authUser = await currentUser();
+
+  if (!authUser) {
+    redirect("/");
+  }
+
+  await connectDB();
+  const dbUser = await User.findOne({ clerkId: authUser.id }).lean();
+
+  if (!dbUser || dbUser.role === "none" || !dbUser.onboardingCompleted) {
+    redirect("/onboarding");
+  }
+
   const stats = [
     {
       label: "Total Scans",
@@ -386,4 +403,4 @@ const FarmerDashboard = () => {
   );
 };
 
-export default FarmerDashboard;
+export default FarmerDashboardPage;

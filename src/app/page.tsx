@@ -29,10 +29,10 @@ import { SignUpButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-export default async function Home() {
-  const user = await currentUser();
+const HomePage = async () => {
+  const authUser = await currentUser();
 
-  if (user) redirect("/dashboard");
+  if (authUser) redirect("/dashboard");
 
   const features = [
     {
@@ -277,30 +277,6 @@ export default async function Home() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20 relative">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <Card
-                key={index}
-                className="border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300"
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-linear-to-br from-primary/10 to-primary/20 flex items-center justify-center">
-                    <stat.icon className="w-7 h-7 text-primary" />
-                  </div>
-                  <p className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-1">
-                    {stat.value}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </div>
       </section>
@@ -578,4 +554,6 @@ export default async function Home() {
       <Footer />
     </div>
   );
-}
+};
+
+export default HomePage;
