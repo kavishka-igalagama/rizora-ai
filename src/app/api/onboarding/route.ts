@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
 
@@ -77,6 +77,11 @@ export async function POST(req: Request) {
 
   try {
     await connectDB();
+
+    const client = await clerkClient();
+    await client.users.updateUserMetadata(userId, {
+      publicMetadata: { role },
+    });
 
     const clerkProfile = await currentUser();
     const email =
