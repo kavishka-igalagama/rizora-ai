@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     if (!district || !nic || !phone) {
       return NextResponse.json(
         { error: "District, NIC, and phone are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     updates.district = district;
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     if (!district || !millName || !regNo || !address || !phone) {
       return NextResponse.json(
         { error: "All mill fields are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     updates.district = district;
@@ -63,14 +63,14 @@ export async function POST(req: Request) {
     if (!officerPassword) {
       return NextResponse.json(
         { error: "Officer admin password not configured" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (adminPassword !== officerPassword) {
       return NextResponse.json(
         { error: "Invalid admin password" },
-        { status: 403 }
+        { status: 403 },
       );
     }
   }
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     if (!email) {
       return NextResponse.json(
         { error: "Unable to read email from Clerk profile" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
           imageUrl: clerkProfile?.imageUrl,
         },
       },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
 
     return NextResponse.json({ success: true, user });
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     console.error("Error saving onboarding data", error);
     return NextResponse.json(
       { error: "Failed to save onboarding data" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

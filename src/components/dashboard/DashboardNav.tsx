@@ -4,16 +4,22 @@ import Link from "next/link";
 import { UserButton, useClerk } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import {
+  BadgeCheck,
+  BarChart3,
   Bell,
   BookOpen,
   Calendar,
   DollarSign,
+  FileSearch,
   LayoutDashboard,
   Leaf,
+  Library,
+  MapIcon,
   MessageSquare,
   Microscope,
   Settings,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -47,13 +53,13 @@ export default function DashboardNav({
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      label: "Disease Detection",
+      label: "AI Disease Detection",
       href: "/dashboard/disease-detect",
       icon: <Microscope className="h-5 w-5" />,
     },
     {
-      label: "Farm Records",
-      href: "/dashboard/farm-records",
+      label: "Digital Paddy Records",
+      href: "/dashboard/records",
       icon: <BookOpen className="h-5 w-5" />,
     },
     {
@@ -62,7 +68,7 @@ export default function DashboardNav({
       icon: <TrendingUp className="h-5 w-5" />,
     },
     {
-      label: "Messages",
+      label: "Communication Hub",
       href: "/dashboard/messages",
       icon: <MessageSquare className="h-5 w-5" />,
     },
@@ -75,14 +81,62 @@ export default function DashboardNav({
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      href: "/collections",
-      label: "Collections",
+      href: "/dashboard/collections",
+      label: "Procurement Schedule",
       icon: <Calendar className="h-5 w-5" />,
     },
     {
-      href: "/pricing",
-      label: "Pricing",
+      href: "/dashboard/pricing",
+      label: "Price Management",
       icon: <DollarSign className="h-5 w-5" />,
+    },
+    {
+      href: "/dashboard/quality",
+      label: "Quality & Grading",
+      icon: <BadgeCheck className="h-5 w-5" />,
+    },
+    {
+      href: "/dashboard/reports",
+      label: "Reports & Analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+    },
+  ];
+
+  const officerLinks: NavLink[] = [
+    {
+      label: "Dashboard",
+      href: "/dashboard",
+      icon: <LayoutDashboard className="h-5 w-5" />,
+    },
+    {
+      label: "Disease Monitoring Map",
+      href: "/dashboard/map",
+      icon: <MapIcon className="h-5 w-5" />,
+    },
+    {
+      label: "Disease Reports",
+      href: "/dashboard/reports",
+      icon: <FileSearch className="h-5 w-5" />,
+    },
+    {
+      label: "Knowledge Base",
+      href: "/dashboard/knowledge",
+      icon: <Library className="h-5 w-5" />,
+    },
+    {
+      label: "Farmer Insights",
+      href: "/dashboard/farmers",
+      icon: <Users className="h-5 w-5" />,
+    },
+    {
+      label: "Market & Production Insights",
+      href: "/dashboard/insights",
+      icon: <TrendingUp className="h-5 w-5" />,
+    },
+    {
+      label: "Communication Hub",
+      href: "/dashboard/messages",
+      icon: <MessageSquare className="h-5 w-5" />,
     },
   ];
 
@@ -99,7 +153,14 @@ export default function DashboardNav({
     },
   ];
 
-  const links = role === "mill" ? millLinks : farmerLinks;
+  const links =
+    role === "farmer"
+      ? farmerLinks
+      : role === "mill"
+        ? millLinks
+        : role === "officer"
+          ? officerLinks
+          : [];
 
   const handleLinkClick = () => {
     if (onCloseMobile) {
@@ -223,7 +284,13 @@ export default function DashboardNav({
               {userName || "User"}
             </p>
             <p className="text-xs text-gray-400 truncate">
-              {role === "mill" ? "mill" : "Farmer"}
+              {role === "farmer"
+                ? "Farmer"
+                : role === "mill"
+                  ? "Mill"
+                  : role === "officer"
+                    ? "Officer"
+                    : ""}
             </p>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
+import { Loader2 } from "lucide-react";
 import { redirect } from "next/navigation";
 import React, { useState } from "react";
 import DashboardNav from "@/components/dashboard/DashboardNav";
@@ -12,11 +13,19 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   if (!isLoaded) return null;
 
-  if (!user) return redirect("/sign-in");
+  if (!user) return redirect("/");
 
-  const role = user.publicMetadata.role as "farmer" | "mill" | "officer";
+  const role = user.publicMetadata.role as
+    | "farmer"
+    | "mill"
+    | "officer"
+    | undefined;
 
   const userName = user.firstName || "User";
+
+  if (!role) {
+    redirect("/onboarding");
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">

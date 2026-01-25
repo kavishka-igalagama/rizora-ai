@@ -1,24 +1,29 @@
-"use client";
-
 import { redirect } from "next/navigation";
 import FarmerDashboard from "@/components/dashboard/FarmerDashboard";
 import MillDashboard from "@/components/dashboard/MillDashboard";
-import { useUser } from "@clerk/nextjs";
+import { getCurrentUserWithRole } from "@/lib/auth";
+import OfficerDashboard from "@/components/dashboard/OfficerDashboard";
 
-const DashboardPage = () => {
-  const { user } = useUser();
+const DashboardPage = async () => {
+  const user = await getCurrentUserWithRole();
 
   if (!user) {
-    redirect("/sign-in");
+    redirect("/");
   }
 
-  const role = user.publicMetadata.role as "farmer" | "mill" | "officer";
+  if (user.role === "farmer") {
+    return <FarmerDashboard userName={user.firstName || "User"} />;
+  }
 
-  if (role === "mill") {
+  if (user.role === "mill") {
     return <MillDashboard userName={user.firstName || "User"} />;
   }
 
-  return <FarmerDashboard userName={user.firstName || "User"} />;
+  if (user.role === "officer") {
+    return <OfficerDashboard />;
+  }
+
+  redirect("/");
 };
 
 export default DashboardPage;
