@@ -73,7 +73,7 @@ const districts = [
 
 const OnboardingForm = () => {
   const router = useRouter();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [formData, setFormData] = useState({
     district: "",
@@ -134,6 +134,10 @@ const OnboardingForm = () => {
 
       if (!response.ok) {
         throw new Error(data?.error || "Failed to save your details");
+      }
+
+      if (user) {
+        await user.reload();
       }
 
       router.push("/dashboard");

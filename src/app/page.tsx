@@ -23,16 +23,18 @@ import heroImage from "@public/hero-rice-field.jpg";
 import diseaseIcon from "@public/disease-detection-icon.jpg";
 import farmIcon from "@public/farm-management-icon.jpg";
 import marketIcon from "@public/market-price-icon.jpg";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/home/Navbar";
+import Footer from "@/components/home/Footer";
 import { SignUpButton } from "@clerk/nextjs";
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getCurrentUserWithRole } from "@/lib/auth";
 
 const HomePage = async () => {
-  const authUser = await currentUser();
+  const user = await getCurrentUserWithRole();
 
-  if (authUser) redirect("/dashboard");
+  if (user && !user.role) redirect("/onboarding");
+
+  if (user) redirect("/dashboard");
 
   const features = [
     {

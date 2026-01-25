@@ -1,8 +1,8 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from "@/components/home/Navbar";
+import Footer from "@/components/home/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

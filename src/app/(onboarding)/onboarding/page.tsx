@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
-import OnboardingForm from "./OnboardingForm";
+import OnboardingForm from "@/components/onboarding/OnboardingForm";
 
 const OnboardingPage = async () => {
   const authUser = await currentUser();
