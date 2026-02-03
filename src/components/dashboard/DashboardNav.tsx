@@ -59,7 +59,7 @@ export default function DashboardNav({
     },
     {
       label: "Digital Paddy Records",
-      href: "/dashboard/records",
+      href: "/dashboard/paddy-records",
       icon: <BookOpen className="h-5 w-5" />,
     },
     {

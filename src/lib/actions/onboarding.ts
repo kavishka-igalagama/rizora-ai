@@ -1,16 +1,30 @@
-import { NextResponse } from "next/server";
+"use server";
+
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
+import User from "@/lib/models/User";
+type Roles = "farmer" | "mill" | "officer";
 
-export async function POST(req: Request) {
+export interface OnboardingPayload {
+  role: Roles;
+  district?: string;
+  nic?: string;
+  phone?: string;
+  millName?: string;
+  regNo?: string;
+  address?: string;
+  adminPassword?: string;
+}
+
+export async function saveOnboarding(
+  data: OnboardingPayload,
+): Promise<{ success: boolean; error?: string }> {
   const { userId } = await auth();
 
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return { success: false, error: "Unauthorized" };
   }
 
-  const body = await req.json();
   const {
     role,
     district,
@@ -20,10 +34,10 @@ export async function POST(req: Request) {
     regNo,
     address,
     adminPassword,
-  } = body ?? {};
+  } = data ?? {};
 
   if (!role || !["farmer", "mill", "officer"].includes(role)) {
-    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    return { success: false, error: "Invalid role" };
   }
 
   const updates: Record<string, unknown> = {
@@ -33,10 +47,7 @@ export async function POST(req: Request) {
 
   if (role === "farmer") {
     if (!district || !nic || !phone) {
-      return NextResponse.json(
-        { error: "District, NIC, and phone are required" },
-        { status: 400 },
-      );
+      return { success: false, error: "District, NIC, and phone are required" };
     }
     updates.district = district;
     updates.nic = nic;
@@ -45,10 +56,7 @@ export async function POST(req: Request) {
 
   if (role === "mill") {
     if (!district || !millName || !regNo || !address || !phone) {
-      return NextResponse.json(
-        { error: "All mill fields are required" },
-        { status: 400 },
-      );
+      return { success: false, error: "All mill fields are required" };
     }
     updates.district = district;
     updates.millName = millName;
@@ -61,17 +69,11 @@ export async function POST(req: Request) {
     const officerPassword = process.env.OFFICER_ADMIN_PASSWORD;
 
     if (!officerPassword) {
-      return NextResponse.json(
-        { error: "Officer admin password not configured" },
-        { status: 500 },
-      );
+      return { success: false, error: "Officer admin password not configured" };
     }
 
     if (adminPassword !== officerPassword) {
-      return NextResponse.json(
-        { error: "Invalid admin password" },
-        { status: 403 },
-      );
+      return { success: false, error: "Invalid admin password" };
     }
   }
 
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
 
     const client = await clerkClient();
     await client.users.updateUserMetadata(userId, {
-      publicMetadata: { role },
+      publicMetadata: { role, onboardingComplete: true },
     });
 
     const clerkProfile = await currentUser();
@@ -89,13 +91,13 @@ export async function POST(req: Request) {
       clerkProfile?.emailAddresses?.[0]?.emailAddress;
 
     if (!email) {
-      return NextResponse.json(
-        { error: "Unable to read email from Clerk profile" },
-        { status: 400 },
-      );
+      return {
+        success: false,
+        error: "Unable to read email from Clerk profile",
+      };
     }
 
-    const user = await User.findOneAndUpdate(
+    await User.findOneAndUpdate(
       { clerkId: userId },
       {
         $set: updates,
@@ -110,12 +112,9 @@ export async function POST(req: Request) {
       { new: true, upsert: true },
     );
 
-    return NextResponse.json({ success: true, user });
+    return { success: true };
   } catch (error) {
     console.error("Error saving onboarding data", error);
-    return NextResponse.json(
-      { error: "Failed to save onboarding data" },
-      { status: 500 },
-    );
+    return { success: false, error: "Failed to save onboarding data" };
   }
 }

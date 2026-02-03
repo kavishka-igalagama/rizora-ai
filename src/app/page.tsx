@@ -32,8 +32,6 @@ import { getCurrentUserWithRole } from "@/lib/auth";
 const HomePage = async () => {
   const user = await getCurrentUserWithRole();
 
-  if (user && !user.role) redirect("/onboarding");
-
   if (user) redirect("/dashboard");
 
   const features = [
