@@ -22,7 +22,6 @@ import {
   Edit,
   Trash2,
   Eye,
-  FileText,
   PieChart,
   DollarSign,
   Wheat,
@@ -30,7 +29,6 @@ import {
   Clock,
   CheckCircle2,
   Loader2,
-  X,
   Layers,
   AlertCircle,
 } from "lucide-react";
@@ -117,7 +115,6 @@ interface Field {
 
 const FarmRecords = () => {
   const [activeTab, setActiveTab] = useState("planting");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Dialog states
   const [isAddPlantingOpen, setIsAddPlantingOpen] = useState(false);

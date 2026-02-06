@@ -1,15 +1,18 @@
-import mongoose, { Document, Model, Schema } from "mongoose";
+import mongoose, { Document, Model, Schema, Types } from "mongoose";
 
 export interface IField {
+  _id: Types.ObjectId;
   name: string;
   location: string;
   area: string;
   status: "Active" | "Fallow" | "Preparing";
   soilType: string;
   currentCrop?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export interface IPlantingEntry {
+export interface IPlantingRecord {
   field: string;
   variety: string;
   date: Date;
@@ -19,9 +22,11 @@ export interface IPlantingEntry {
   expectedHarvest?: Date;
   seedQuantity?: string;
   notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface IFertilizerEntry {
+export interface IFertilizerRecord {
   field: string;
   type: string;
   quantity: string;
@@ -32,7 +37,7 @@ export interface IFertilizerEntry {
   notes?: string;
 }
 
-export interface IHarvestEntry {
+export interface IHarvestRecord {
   field: string;
   date: Date;
   yield: number;
@@ -50,9 +55,9 @@ export interface IPaddyRecord extends Document {
   season?: string;
   farmName?: string;
   fields: IField[];
-  plantings: IPlantingEntry[];
-  fertilizerApplications: IFertilizerEntry[];
-  harvests: IHarvestEntry[];
+  plantings: IPlantingRecord[];
+  fertilizerApplications: IFertilizerRecord[];
+  harvests: IHarvestRecord[];
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -71,10 +76,10 @@ const fieldSchema = new Schema<IField>(
     soilType: { type: String, required: true },
     currentCrop: { type: String },
   },
-  { _id: false },
+  { timestamps: true },
 );
 
-const plantingSchema = new Schema<IPlantingEntry>(
+const plantingSchema = new Schema<IPlantingRecord>(
   {
     field: { type: String, required: true },
     variety: { type: String, required: true },
@@ -93,7 +98,7 @@ const plantingSchema = new Schema<IPlantingEntry>(
   { _id: false },
 );
 
-const fertilizerSchema = new Schema<IFertilizerEntry>(
+const fertilizerSchema = new Schema<IFertilizerRecord>(
   {
     field: { type: String, required: true },
     type: { type: String, required: true },
@@ -107,7 +112,7 @@ const fertilizerSchema = new Schema<IFertilizerEntry>(
   { _id: false },
 );
 
-const harvestSchema = new Schema<IHarvestEntry>(
+const harvestSchema = new Schema<IHarvestRecord>(
   {
     field: { type: String, required: true },
     date: { type: Date, required: true },
