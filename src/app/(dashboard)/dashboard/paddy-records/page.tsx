@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getFields } from "@/lib/actions/farmer/paddy-records";
+import FieldManagementSection, {
+  type Field,
+} from "@/components/dashboard/farmer/FieldManagementSection";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -103,16 +107,6 @@ interface HarvestRecord {
   notes?: string;
 }
 
-interface Field {
-  id: number;
-  name: string;
-  location: string;
-  area: string;
-  status: "Active" | "Fallow" | "Preparing";
-  currentCrop?: string;
-  soilType: string;
-}
-
 const FarmRecords = () => {
   const [activeTab, setActiveTab] = useState("planting");
 
@@ -120,17 +114,16 @@ const FarmRecords = () => {
   const [isAddPlantingOpen, setIsAddPlantingOpen] = useState(false);
   const [isAddFertilizerOpen, setIsAddFertilizerOpen] = useState(false);
   const [isAddHarvestOpen, setIsAddHarvestOpen] = useState(false);
-  const [isAddFieldOpen, setIsAddFieldOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Selected record states
   const [selectedRecord, setSelectedRecord] = useState<
-    PlantingRecord | FertilizerRecord | HarvestRecord | Field | null
+    PlantingRecord | FertilizerRecord | HarvestRecord | null
   >(null);
   const [selectedRecordType, setSelectedRecordType] = useState<
-    "planting" | "fertilizer" | "harvest" | "field"
+    "planting" | "fertilizer" | "harvest"
   >("planting");
 
   // Form states
@@ -165,14 +158,6 @@ const FarmRecords = () => {
     variety: "",
     soldTo: "",
     notes: "",
-  });
-
-  const [fieldForm, setFieldForm] = useState({
-    name: "",
-    location: "",
-    area: "",
-    soilType: "",
-    status: "",
   });
 
   // Data states
@@ -314,42 +299,34 @@ const FarmRecords = () => {
     },
   ]);
 
-  const [fields, setFields] = useState<Field[]>([
-    {
-      id: 1,
-      name: "Field A",
-      location: "Kandalama",
-      area: "2.5 acres",
-      status: "Active",
-      currentCrop: "BG 300",
-      soilType: "Clay Loam",
-    },
-    {
-      id: 2,
-      name: "Field B",
-      location: "Dambulla",
-      area: "3.0 acres",
-      status: "Active",
-      currentCrop: "BG 352",
-      soilType: "Sandy Loam",
-    },
-    {
-      id: 3,
-      name: "Field C",
-      location: "Sigiriya",
-      area: "2.0 acres",
-      status: "Fallow",
-      soilType: "Clay",
-    },
-    {
-      id: 4,
-      name: "Field D",
-      location: "Habarana",
-      area: "1.5 acres",
-      status: "Preparing",
-      soilType: "Loam",
-    },
-  ]);
+  const [fields, setFields] = useState<Field[]>([]);
+  const [fieldsLoading, setFieldsLoading] = useState(true);
+
+  // Load fields from server on mount
+  useEffect(() => {
+    let cancelled = false;
+    getFields().then((res) => {
+      if (cancelled) return;
+      setFieldsLoading(false);
+      if (res.success && res.fields) {
+        setFields(
+          res.fields.map((f: { _id: { toString?: () => string } | string; name: string; location: string; area: string; status: "Active" | "Fallow" | "Preparing"; soilType: string; currentCrop?: string }) => ({
+            id: typeof f._id === "string" ? f._id : f._id?.toString?.() ?? "",
+            name: f.name,
+            location: f.location,
+            area: f.area,
+            status: f.status,
+            soilType: f.soilType,
+            currentCrop: f.currentCrop,
+          })),
+        );
+      }
+      if (!res.success && res.error) toast.error(res.error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Calculate statistics
   const totalArea = plantingRecords.reduce(
@@ -420,15 +397,6 @@ const FarmRecords = () => {
       soldTo: "",
       notes: "",
     });
-  const resetFieldForm = () =>
-    setFieldForm({
-      name: "",
-      location: "",
-      area: "",
-      soilType: "",
-      status: "",
-    });
-
   // Add record handlers
   const handleAddPlanting = () => {
     const newRecord: PlantingRecord = {
@@ -489,25 +457,10 @@ const FarmRecords = () => {
     toast.success("Harvest record added successfully!");
   };
 
-  const handleAddField = () => {
-    const newField: Field = {
-      id: Date.now(),
-      name: fieldForm.name,
-      location: fieldForm.location,
-      area: fieldForm.area,
-      status: fieldForm.status as "Active" | "Fallow" | "Preparing",
-      soilType: fieldForm.soilType,
-    };
-    setFields([newField, ...fields]);
-    setIsAddFieldOpen(false);
-    resetFieldForm();
-    toast.success("Field added successfully!");
-  };
-
   // View record handler
   const handleViewRecord = (
-    record: PlantingRecord | FertilizerRecord | HarvestRecord | Field,
-    type: "planting" | "fertilizer" | "harvest" | "field",
+    record: PlantingRecord | FertilizerRecord | HarvestRecord,
+    type: "planting" | "fertilizer" | "harvest",
   ) => {
     setSelectedRecord(record);
     setSelectedRecordType(type);
@@ -516,8 +469,8 @@ const FarmRecords = () => {
 
   // Edit record handler
   const handleEditRecord = (
-    record: PlantingRecord | FertilizerRecord | HarvestRecord | Field,
-    type: "planting" | "fertilizer" | "harvest" | "field",
+    record: PlantingRecord | FertilizerRecord | HarvestRecord,
+    type: "planting" | "fertilizer" | "harvest",
   ) => {
     setSelectedRecord(record);
     setSelectedRecordType(type);
@@ -558,21 +511,12 @@ const FarmRecords = () => {
         soldTo: r.soldTo || "",
         notes: r.notes || "",
       });
-    } else if (type === "field") {
-      const r = record as Field;
-      setFieldForm({
-        name: r.name,
-        location: r.location,
-        area: r.area,
-        soilType: r.soilType,
-        status: r.status,
-      });
     }
     setIsEditDialogOpen(true);
   };
 
   // Save edit handler
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!selectedRecord) return;
 
     if (selectedRecordType === "planting") {
@@ -638,22 +582,6 @@ const FarmRecords = () => {
         ),
       );
       resetHarvestForm();
-    } else if (selectedRecordType === "field") {
-      setFields(
-        fields.map((f) =>
-          f.id === selectedRecord.id
-            ? {
-                ...f,
-                name: fieldForm.name,
-                location: fieldForm.location,
-                area: fieldForm.area,
-                soilType: fieldForm.soilType,
-                status: fieldForm.status as "Active" | "Fallow" | "Preparing",
-              }
-            : f,
-        ),
-      );
-      resetFieldForm();
     }
 
     setIsEditDialogOpen(false);
@@ -663,15 +591,15 @@ const FarmRecords = () => {
 
   // Delete record handler
   const handleDeleteRecord = (
-    record: PlantingRecord | FertilizerRecord | HarvestRecord | Field,
-    type: "planting" | "fertilizer" | "harvest" | "field",
+    record: PlantingRecord | FertilizerRecord | HarvestRecord,
+    type: "planting" | "fertilizer" | "harvest",
   ) => {
     setSelectedRecord(record);
     setSelectedRecordType(type);
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!selectedRecord) return;
 
     if (selectedRecordType === "planting") {
@@ -686,8 +614,6 @@ const FarmRecords = () => {
       setHarvestRecords(
         harvestRecords.filter((r) => r.id !== selectedRecord.id),
       );
-    } else if (selectedRecordType === "field") {
-      setFields(fields.filter((f) => f.id !== selectedRecord.id));
     }
 
     setIsDeleteDialogOpen(false);
@@ -913,128 +839,11 @@ const FarmRecords = () => {
 
             {/* Fields Tab */}
             <TabsContent value="fields" className="space-y-4">
-              <Card className="border-border">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Layers className="w-5 h-5 text-violet-500" />
-                        Field Management
-                      </CardTitle>
-                      <CardDescription>
-                        Manage your farm fields and their details
-                      </CardDescription>
-                    </div>
-                    <Button
-                      onClick={() => setIsAddFieldOpen(true)}
-                      className="bg-linear-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Field
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {fields.map((field) => (
-                      <Card
-                        key={field.id}
-                        className="border-border bg-muted/30 hover:bg-muted/50 transition-all"
-                      >
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={cn(
-                                  "w-12 h-12 rounded-lg flex items-center justify-center",
-                                  field.status === "Active"
-                                    ? "bg-linear-to-br from-emerald-500 to-teal-600"
-                                    : field.status === "Fallow"
-                                      ? "bg-linear-to-br from-amber-500 to-orange-600"
-                                      : "bg-linear-to-br from-blue-500 to-indigo-600",
-                                )}
-                              >
-                                <Layers className="w-6 h-6 text-white" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-foreground">
-                                  {field.name}
-                                </h4>
-                                <p className="text-sm text-muted-foreground">
-                                  {field.location}
-                                </p>
-                              </div>
-                            </div>
-                            <Badge
-                              variant={
-                                field.status === "Active"
-                                  ? "default"
-                                  : field.status === "Fallow"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              {field.status}
-                            </Badge>
-                          </div>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                Area:
-                              </span>
-                              <span className="font-medium">{field.area}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                Soil Type:
-                              </span>
-                              <span className="font-medium">
-                                {field.soilType}
-                              </span>
-                            </div>
-                            {field.currentCrop && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">
-                                  Current Crop:
-                                </span>
-                                <Badge variant="outline">
-                                  {field.currentCrop}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleViewRecord(field, "field")}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditRecord(field, "field")}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteRecord(field, "field")}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <FieldManagementSection
+                fields={fields}
+                setFields={setFields}
+                fieldsLoading={fieldsLoading}
+              />
             </TabsContent>
 
             {/* Planting Records */}
@@ -1506,102 +1315,6 @@ const FarmRecords = () => {
           </Tabs>
         </div>
       </main>
-
-      {/* Add Field Dialog */}
-      <Dialog open={isAddFieldOpen} onOpenChange={setIsAddFieldOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-violet-500" />
-              Add New Field
-            </DialogTitle>
-            <DialogDescription>Add a new field to your farm</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Field Name</Label>
-                <Input
-                  placeholder="e.g., Field E"
-                  value={fieldForm.name}
-                  onChange={(e) =>
-                    setFieldForm({ ...fieldForm, name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <Input
-                  placeholder="e.g., Anuradhapura"
-                  value={fieldForm.location}
-                  onChange={(e) =>
-                    setFieldForm({ ...fieldForm, location: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Area</Label>
-                <Input
-                  placeholder="e.g., 2.5 acres"
-                  value={fieldForm.area}
-                  onChange={(e) =>
-                    setFieldForm({ ...fieldForm, area: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Soil Type</Label>
-                <Select
-                  value={fieldForm.soilType}
-                  onValueChange={(v) =>
-                    setFieldForm({ ...fieldForm, soilType: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select soil type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Clay">Clay</SelectItem>
-                    <SelectItem value="Clay Loam">Clay Loam</SelectItem>
-                    <SelectItem value="Loam">Loam</SelectItem>
-                    <SelectItem value="Sandy Loam">Sandy Loam</SelectItem>
-                    <SelectItem value="Sandy">Sandy</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={fieldForm.status}
-                onValueChange={(v) => setFieldForm({ ...fieldForm, status: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Fallow">Fallow</SelectItem>
-                  <SelectItem value="Preparing">Preparing</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddFieldOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddField}
-              className="bg-linear-to-r from-violet-500 to-purple-600"
-            >
-              Save Field
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Add Planting Dialog */}
       <Dialog open={isAddPlantingOpen} onOpenChange={setIsAddPlantingOpen}>
@@ -2325,60 +2038,6 @@ const FarmRecords = () => {
                   )}
                 </div>
               )}
-              {selectedRecordType === "field" && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-muted-foreground text-sm">
-                        Name:
-                      </span>
-                      <p className="font-medium">
-                        {(selectedRecord as Field).name}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-sm">
-                        Location:
-                      </span>
-                      <p className="font-medium">
-                        {(selectedRecord as Field).location}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-sm">
-                        Area:
-                      </span>
-                      <p className="font-medium">
-                        {(selectedRecord as Field).area}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-sm">
-                        Soil Type:
-                      </span>
-                      <p className="font-medium">
-                        {(selectedRecord as Field).soilType}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-sm">
-                        Status:
-                      </span>
-                      <Badge>{(selectedRecord as Field).status}</Badge>
-                    </div>
-                    {(selectedRecord as Field).currentCrop && (
-                      <div>
-                        <span className="text-muted-foreground text-sm">
-                          Current Crop:
-                        </span>
-                        <p className="font-medium">
-                          {(selectedRecord as Field).currentCrop}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
           <DialogFooter>
@@ -2403,9 +2062,7 @@ const FarmRecords = () => {
                 ? "Planting"
                 : selectedRecordType === "fertilizer"
                   ? "Fertilizer"
-                  : selectedRecordType === "harvest"
-                    ? "Harvest"
-                    : "Field"}{" "}
+                  : "Harvest"}{" "}
               Record
             </DialogTitle>
           </DialogHeader>
@@ -2729,68 +2386,6 @@ const FarmRecords = () => {
                       setHarvestForm({ ...harvestForm, notes: e.target.value })
                     }
                   />
-                </div>
-              </>
-            )}
-            {selectedRecordType === "field" && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Field Name</Label>
-                    <Input
-                      value={fieldForm.name}
-                      onChange={(e) =>
-                        setFieldForm({ ...fieldForm, name: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <Input
-                      value={fieldForm.location}
-                      onChange={(e) =>
-                        setFieldForm({ ...fieldForm, location: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Area</Label>
-                    <Input
-                      value={fieldForm.area}
-                      onChange={(e) =>
-                        setFieldForm({ ...fieldForm, area: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Soil Type</Label>
-                    <Input
-                      value={fieldForm.soilType}
-                      onChange={(e) =>
-                        setFieldForm({ ...fieldForm, soilType: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={fieldForm.status}
-                    onValueChange={(v) =>
-                      setFieldForm({ ...fieldForm, status: v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Fallow">Fallow</SelectItem>
-                      <SelectItem value="Preparing">Preparing</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </>
             )}
