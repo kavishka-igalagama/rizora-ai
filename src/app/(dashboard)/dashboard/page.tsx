@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import FarmerDashboard from "@/components/dashboard/FarmerDashboard";
+import FarmerDashboard from "@/components/dashboard/farmer/FarmerDashboard";
 import MillDashboard from "@/components/dashboard/MillDashboard";
 import { getCurrentUserWithRole } from "@/lib/auth";
 import OfficerDashboard from "@/components/dashboard/OfficerDashboard";

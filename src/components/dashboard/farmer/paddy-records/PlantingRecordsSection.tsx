@@ -166,14 +166,14 @@ const PlantingRecordsSection = ({
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Area:</span>
                   <span className="text-foreground font-medium">
-                    {record.area}
+                    {record.area} acres
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Wheat className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Seeds:</span>
                   <span className="text-foreground font-medium">
-                    {record.seedQuantity}
+                    {record.seedQuantity} kg
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
