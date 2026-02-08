@@ -62,7 +62,6 @@ const FarmRecords = () => {
     area: "",
     seedQuantity: "",
     expectedHarvest: "",
-    progress: "0",
     notes: "",
   });
 
@@ -335,7 +334,6 @@ const FarmRecords = () => {
       area: "",
       seedQuantity: "",
       expectedHarvest: "",
-      progress: "0",
       notes: "",
     });
   const resetFertilizerForm = () =>
@@ -369,7 +367,7 @@ const FarmRecords = () => {
       date: plantingForm.date,
       area: plantingForm.area,
       status: "Growing",
-      progress: parseFloat(plantingForm.progress) || 0,
+      progress: 0,
       expectedHarvest: plantingForm.expectedHarvest || undefined,
       seedQuantity: plantingForm.seedQuantity || undefined,
       notes: plantingForm.notes || undefined,
@@ -476,7 +474,6 @@ const FarmRecords = () => {
         area: r.area,
         seedQuantity: r.seedQuantity,
         expectedHarvest: r.expectedHarvest,
-        progress: r.progress.toString(),
         notes: r.notes || "",
       });
     } else if (type === "fertilizer") {
@@ -520,7 +517,7 @@ const FarmRecords = () => {
         date: plantingForm.date,
         area: plantingForm.area,
         status: record.status,
-        progress: parseFloat(plantingForm.progress) || 0,
+        progress: record.progress,
         seedQuantity: plantingForm.seedQuantity || undefined,
         expectedHarvest: plantingForm.expectedHarvest || undefined,
         notes: plantingForm.notes || undefined,
