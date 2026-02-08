@@ -13,6 +13,7 @@ export interface IField {
 }
 
 export interface IPlantingRecord {
+  _id: Types.ObjectId;
   field: string;
   variety: string;
   date: Date;
@@ -27,6 +28,7 @@ export interface IPlantingRecord {
 }
 
 export interface IFertilizerRecord {
+  _id: Types.ObjectId;
   field: string;
   type: string;
   quantity: string;
@@ -38,6 +40,7 @@ export interface IFertilizerRecord {
 }
 
 export interface IHarvestRecord {
+  _id: Types.ObjectId;
   field: string;
   date: Date;
   yield: number;
@@ -79,7 +82,7 @@ const fieldSchema = new Schema<IField>(
   { timestamps: true },
 );
 
-const plantingSchema = new Schema<IPlantingRecord>(
+const plantingRecordSchema = new Schema<IPlantingRecord>(
   {
     field: { type: String, required: true },
     variety: { type: String, required: true },
@@ -95,10 +98,10 @@ const plantingSchema = new Schema<IPlantingRecord>(
     seedQuantity: { type: String },
     notes: { type: String },
   },
-  { _id: false },
+  { timestamps: true },
 );
 
-const fertilizerSchema = new Schema<IFertilizerRecord>(
+const fertilizerRecordSchema = new Schema<IFertilizerRecord>(
   {
     field: { type: String, required: true },
     type: { type: String, required: true },
@@ -109,10 +112,10 @@ const fertilizerSchema = new Schema<IFertilizerRecord>(
     method: { type: String },
     notes: { type: String },
   },
-  { _id: false },
+  { timestamps: true },
 );
 
-const harvestSchema = new Schema<IHarvestRecord>(
+const harvestRecordSchema = new Schema<IHarvestRecord>(
   {
     field: { type: String, required: true },
     date: { type: Date, required: true },
@@ -129,7 +132,7 @@ const harvestSchema = new Schema<IHarvestRecord>(
     soldTo: { type: String },
     notes: { type: String },
   },
-  { _id: false },
+  { timestamps: true },
 );
 
 const PaddyRecordSchema = new Schema<IPaddyRecord>(
@@ -138,9 +141,9 @@ const PaddyRecordSchema = new Schema<IPaddyRecord>(
     season: { type: String },
     farmName: { type: String },
     fields: { type: [fieldSchema], default: [] },
-    plantings: { type: [plantingSchema], default: [] },
-    fertilizerApplications: { type: [fertilizerSchema], default: [] },
-    harvests: { type: [harvestSchema], default: [] },
+    plantings: { type: [plantingRecordSchema], default: [] },
+    fertilizerApplications: { type: [fertilizerRecordSchema], default: [] },
+    harvests: { type: [harvestRecordSchema], default: [] },
     notes: { type: String },
   },
   {

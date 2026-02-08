@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
-import PaddyRecord, { IField } from "@/lib/models/PaddyRecord";
+import PaddyRecord, { IField, IPlantingRecord } from "@/lib/models/PaddyRecord";
 
 interface FieldsData {
   name: string;
@@ -13,6 +13,90 @@ interface FieldsData {
   soilType: string;
   currentCrop?: string;
 }
+
+interface PlantingData {
+  field: string;
+  variety: string;
+  date: string;
+  area: string;
+  status?: "Growing" | "Harvested" | "Preparing";
+  expectedHarvest?: string;
+  seedQuantity?: string;
+  notes?: string;
+}
+
+interface PlantingRecordResponse {
+  id: string;
+  field: string;
+  variety: string;
+  date: string;
+  area: string;
+  status: "Growing" | "Harvested" | "Preparing";
+  progress: number;
+  expectedHarvest?: string;
+  seedQuantity?: string;
+  notes?: string;
+}
+
+const parseDateOnly = (value?: string) => {
+  if (!value) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatDateOnly = (value?: Date) => {
+  if (!value) return "";
+  return value.toISOString().split("T")[0] ?? "";
+};
+
+const computeGrowthProgress = (
+  plantedOn?: Date,
+  expectedHarvest?: Date,
+  status?: "Growing" | "Harvested" | "Preparing",
+) => {
+  if (status === "Harvested") return 100;
+  if (!plantedOn || !expectedHarvest) return 0;
+
+  const start = plantedOn.getTime();
+  const end = expectedHarvest.getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    return 0;
+  }
+
+  const now = Date.now();
+  if (now >= end) return 100;
+  if (now <= start) return 0;
+
+  const progress = ((now - start) / (end - start)) * 100;
+  return Math.max(0, Math.min(100, Math.round(progress)));
+};
+
+const normalizePlantingRecord = (
+  record: IPlantingRecord,
+): PlantingRecordResponse => {
+  const progress = computeGrowthProgress(
+    record.date,
+    record.expectedHarvest,
+    record.status ?? "Growing",
+  );
+  const resolvedStatus =
+    progress >= 100 ? "Harvested" : (record.status ?? "Growing");
+
+  return {
+    id: record._id.toString(),
+    field: record.field,
+    variety: record.variety,
+    date: formatDateOnly(record.date),
+    area: record.area,
+    status: resolvedStatus,
+    progress,
+    expectedHarvest: record.expectedHarvest
+      ? formatDateOnly(record.expectedHarvest)
+      : "",
+    seedQuantity: record.seedQuantity ?? "",
+    notes: record.notes ?? "",
+  };
+};
 
 // Field Management Actions
 export async function addNewField(
@@ -192,6 +276,214 @@ export async function deleteField(
     return {
       success: false,
       error: error?.message || "Failed to delete field",
+    };
+  }
+}
+
+// Planting Record Actions
+export async function addPlantingRecord(data: PlantingData): Promise<{
+  success: boolean;
+  error?: string;
+  planting?: PlantingRecordResponse;
+}> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+
+    if (!data.field || !data.variety || !data.date || !data.area) {
+      return { success: false, error: "Missing required planting details" };
+    }
+
+    const plantingDate = parseDateOnly(data.date);
+    const expectedHarvest = parseDateOnly(data.expectedHarvest);
+    if (!plantingDate) {
+      return { success: false, error: "Invalid planting date" };
+    }
+
+    let record = await PaddyRecord.findOne({ clerkId: userId });
+    if (!record) {
+      record = await PaddyRecord.create({
+        clerkId: userId,
+        fields: [],
+        plantings: [],
+        fertilizerApplications: [],
+        harvests: [],
+      });
+    }
+
+    const status = data.status ?? "Growing";
+    const progress = computeGrowthProgress(
+      plantingDate,
+      expectedHarvest ?? undefined,
+      status,
+    );
+    const resolvedStatus = progress >= 100 ? "Harvested" : status;
+
+    record.plantings.push({
+      field: data.field,
+      variety: data.variety,
+      date: plantingDate,
+      area: data.area,
+      status: resolvedStatus,
+      progress,
+      expectedHarvest: expectedHarvest ?? undefined,
+      seedQuantity: data.seedQuantity,
+      notes: data.notes,
+    } as IPlantingRecord);
+
+    await record.save();
+
+    const saved = record.plantings[record.plantings.length - 1];
+    return {
+      success: true,
+      planting: normalizePlantingRecord(saved as IPlantingRecord),
+    };
+  } catch (error: any) {
+    console.error("Error adding planting record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to add planting record",
+    };
+  }
+}
+
+export async function getPlantingRecords(): Promise<{
+  success: boolean;
+  error?: string;
+  plantings?: PlantingRecordResponse[];
+}> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const record = await PaddyRecord.findOne({ clerkId: userId }).lean();
+    const plantings =
+      (record as { plantings?: IPlantingRecord[] })?.plantings ?? [];
+
+    return {
+      success: true,
+      plantings: plantings.map((p) => normalizePlantingRecord(p)),
+    };
+  } catch (error: any) {
+    console.error("Error fetching planting records:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch planting records",
+    };
+  }
+}
+
+export async function updatePlantingRecord(
+  plantingId: string,
+  data: PlantingData,
+): Promise<{
+  success: boolean;
+  error?: string;
+  planting?: PlantingRecordResponse;
+}> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+
+    if (!data.field || !data.variety || !data.date || !data.area) {
+      return { success: false, error: "Missing required planting details" };
+    }
+
+    const plantingDate = parseDateOnly(data.date);
+    const expectedHarvest = parseDateOnly(data.expectedHarvest);
+    if (!plantingDate) {
+      return { success: false, error: "Invalid planting date" };
+    }
+
+    const record = await PaddyRecord.findOne({ clerkId: userId });
+    if (!record) {
+      return { success: false, error: "Record not found" };
+    }
+
+    const planting = record.plantings.find(
+      (p) => String(p._id) === String(plantingId),
+    );
+    if (!planting) {
+      return { success: false, error: "Planting record not found" };
+    }
+
+    planting.field = data.field;
+    planting.variety = data.variety;
+    planting.date = plantingDate;
+    planting.area = data.area;
+    planting.status = data.status ?? planting.status ?? "Growing";
+    planting.expectedHarvest = expectedHarvest ?? undefined;
+    planting.seedQuantity = data.seedQuantity ?? "";
+    planting.notes = data.notes ?? "";
+    planting.progress = computeGrowthProgress(
+      planting.date,
+      planting.expectedHarvest ?? undefined,
+      planting.status,
+    );
+    if (planting.progress >= 100) {
+      planting.status = "Harvested";
+    }
+
+    await record.save();
+
+    return {
+      success: true,
+      planting: normalizePlantingRecord(planting as IPlantingRecord),
+    };
+  } catch (error: any) {
+    console.error("Error updating planting record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to update planting record",
+    };
+  }
+}
+
+export async function deletePlantingRecord(
+  plantingId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const objectId = mongoose.Types.ObjectId.isValid(plantingId)
+      ? new mongoose.Types.ObjectId(plantingId)
+      : plantingId;
+
+    const record = await PaddyRecord.findOneAndUpdate(
+      { clerkId: userId },
+      { $pull: { plantings: { _id: objectId } } },
+      { new: true },
+    );
+
+    if (!record) {
+      return { success: false, error: "Record not found" };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting planting record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to delete planting record",
     };
   }
 }
