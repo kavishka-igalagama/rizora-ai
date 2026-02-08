@@ -1,19 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  addPlantingRecord,
-  deletePlantingRecord,
-  getFields,
-  getPlantingRecords,
-  updatePlantingRecord,
-} from "@/lib/actions/farmer/paddy-records";
+import { getFields } from "@/lib/actions/farmer/paddy-records";
 import FieldManagementSection, {
   type Field,
 } from "@/components/dashboard/farmer/FieldManagementSection";
-import PlantingRecordsSection, {
-  type PlantingRecord,
-} from "@/components/dashboard/farmer/PlantingRecordsSection";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Plus,
   Calendar,
@@ -38,7 +30,9 @@ import {
   DollarSign,
   Wheat,
   MapPin,
+  Clock,
   CheckCircle2,
+  Loader2,
   Layers,
   AlertCircle,
 } from "lucide-react";
@@ -71,8 +65,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // Types
+interface PlantingRecord {
+  id: number;
+  field: string;
+  variety: string;
+  date: string;
+  area: string;
+  status: "Growing" | "Harvested" | "Preparing";
+  progress: number;
+  expectedHarvest: string;
+  seedQuantity: string;
+  notes?: string;
+}
+
 interface FertilizerRecord {
   id: number;
   field: string;
@@ -153,9 +161,52 @@ const FarmRecords = () => {
   });
 
   // Data states
-  const [plantingRecords, setPlantingRecords] = useState<PlantingRecord[]>([]);
-  const [plantingLoading, setPlantingLoading] = useState(true);
-  const [plantingSaving, setPlantingSaving] = useState(false);
+  const [plantingRecords, setPlantingRecords] = useState<PlantingRecord[]>([
+    {
+      id: 1,
+      field: "Field A - Kandalama",
+      variety: "BG 300",
+      date: "2025-09-15",
+      area: "2.5 acres",
+      status: "Growing",
+      progress: 65,
+      expectedHarvest: "2026-01-15",
+      seedQuantity: "50 kg",
+    },
+    {
+      id: 2,
+      field: "Field B - Dambulla",
+      variety: "BG 352",
+      date: "2025-10-01",
+      area: "3.0 acres",
+      status: "Growing",
+      progress: 45,
+      expectedHarvest: "2026-02-01",
+      seedQuantity: "60 kg",
+    },
+    {
+      id: 3,
+      field: "Field C - Sigiriya",
+      variety: "AT 362",
+      date: "2025-08-20",
+      area: "2.0 acres",
+      status: "Harvested",
+      progress: 100,
+      expectedHarvest: "2025-12-20",
+      seedQuantity: "40 kg",
+    },
+    {
+      id: 4,
+      field: "Field D - Habarana",
+      variety: "BG 450",
+      date: "2025-07-10",
+      area: "1.5 acres",
+      status: "Harvested",
+      progress: 100,
+      expectedHarvest: "2025-11-10",
+      seedQuantity: "30 kg",
+    },
+  ]);
 
   const [fertilizerRecords, setFertilizerRecords] = useState<
     FertilizerRecord[]
@@ -259,26 +310,15 @@ const FarmRecords = () => {
       setFieldsLoading(false);
       if (res.success && res.fields) {
         setFields(
-          res.fields.map(
-            (f: {
-              _id: { toString?: () => string } | string;
-              name: string;
-              location: string;
-              area: string;
-              status: "Active" | "Fallow" | "Preparing";
-              soilType: string;
-              currentCrop?: string;
-            }) => ({
-              id:
-                typeof f._id === "string" ? f._id : (f._id?.toString?.() ?? ""),
-              name: f.name,
-              location: f.location,
-              area: f.area,
-              status: f.status,
-              soilType: f.soilType,
-              currentCrop: f.currentCrop,
-            }),
-          ),
+          res.fields.map((f: { _id: { toString?: () => string } | string; name: string; location: string; area: string; status: "Active" | "Fallow" | "Preparing"; soilType: string; currentCrop?: string }) => ({
+            id: typeof f._id === "string" ? f._id : f._id?.toString?.() ?? "",
+            name: f.name,
+            location: f.location,
+            area: f.area,
+            status: f.status,
+            soilType: f.soilType,
+            currentCrop: f.currentCrop,
+          })),
         );
       }
       if (!res.success && res.error) toast.error(res.error);
@@ -288,26 +328,11 @@ const FarmRecords = () => {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    getPlantingRecords().then((res) => {
-      if (cancelled) return;
-      setPlantingLoading(false);
-      if (res.success && res.plantings) {
-        setPlantingRecords(res.plantings);
-      }
-      if (!res.success && res.error) toast.error(res.error);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Calculate statistics
-  const totalArea = plantingRecords.reduce((sum, r) => {
-    const area = parseFloat(r.area || "0");
-    return sum + (Number.isNaN(area) ? 0 : area);
-  }, 0);
+  const totalArea = plantingRecords.reduce(
+    (sum, r) => sum + parseFloat(r.area),
+    0,
+  );
   const activeFields = plantingRecords.filter(
     (r) => r.status === "Growing",
   ).length;
@@ -322,19 +347,16 @@ const FarmRecords = () => {
     (plantingRecords.filter((r) => r.status === "Harvested").length > 0
       ? plantingRecords
           .filter((r) => r.status === "Harvested")
-          .reduce((sum, r) => {
-            const area = parseFloat(r.area || "0");
-            return sum + (Number.isNaN(area) ? 0 : area);
-          }, 0)
+          .reduce((sum, r) => sum + parseFloat(r.area), 0)
       : 1);
   const netProfit = totalRevenue - totalFertilizerCost;
 
   // Production Summary
   const productionSummary = {
-    totalSeeds: plantingRecords.reduce((sum, r) => {
-      const qty = parseInt(r.seedQuantity || "0", 10);
-      return sum + (Number.isNaN(qty) ? 0 : qty);
-    }, 0),
+    totalSeeds: plantingRecords.reduce(
+      (sum, r) => sum + parseInt(r.seedQuantity),
+      0,
+    ),
     varieties: [...new Set(plantingRecords.map((r) => r.variety))],
     harvestedFields: plantingRecords.filter((r) => r.status === "Harvested")
       .length,
@@ -376,38 +398,23 @@ const FarmRecords = () => {
       notes: "",
     });
   // Add record handlers
-  const handleAddPlanting = async () => {
-    if (
-      !plantingForm.field ||
-      !plantingForm.variety ||
-      !plantingForm.date ||
-      !plantingForm.area
-    ) {
-      toast.error("Please fill all required planting details.");
-      return;
-    }
-
-    setPlantingSaving(true);
-    const res = await addPlantingRecord({
+  const handleAddPlanting = () => {
+    const newRecord: PlantingRecord = {
+      id: Date.now(),
       field: plantingForm.field,
       variety: plantingForm.variety,
       date: plantingForm.date,
       area: plantingForm.area,
+      status: "Growing",
+      progress: 0,
       expectedHarvest: plantingForm.expectedHarvest,
       seedQuantity: plantingForm.seedQuantity,
       notes: plantingForm.notes,
-    });
-
-    setPlantingSaving(false);
-
-    if (res.success && res.planting) {
-      setPlantingRecords((prev) => [res.planting as PlantingRecord, ...prev]);
-      setIsAddPlantingOpen(false);
-      resetPlantingForm();
-      toast.success("Planting record added successfully!");
-    } else if (!res.success && res.error) {
-      toast.error(res.error);
-    }
+    };
+    setPlantingRecords([newRecord, ...plantingRecords]);
+    setIsAddPlantingOpen(false);
+    resetPlantingForm();
+    toast.success("Planting record added successfully!");
   };
 
   const handleAddFertilizer = () => {
@@ -475,8 +482,8 @@ const FarmRecords = () => {
         variety: r.variety,
         date: r.date,
         area: r.area,
-        seedQuantity: r.seedQuantity ?? "",
-        expectedHarvest: r.expectedHarvest ?? "",
+        seedQuantity: r.seedQuantity,
+        expectedHarvest: r.expectedHarvest,
         notes: r.notes || "",
       });
     } else if (type === "fertilizer") {
@@ -513,26 +520,23 @@ const FarmRecords = () => {
     if (!selectedRecord) return;
 
     if (selectedRecordType === "planting") {
-      const plantingId = (selectedRecord as PlantingRecord).id;
-      const res = await updatePlantingRecord(plantingId, {
-        field: plantingForm.field,
-        variety: plantingForm.variety,
-        date: plantingForm.date,
-        area: plantingForm.area,
-        expectedHarvest: plantingForm.expectedHarvest,
-        seedQuantity: plantingForm.seedQuantity,
-        notes: plantingForm.notes,
-      });
-
-      if (res.success && res.planting) {
-        setPlantingRecords((prev) =>
-          prev.map((r) => (r.id === plantingId ? res.planting! : r)),
-        );
-        resetPlantingForm();
-      } else if (!res.success && res.error) {
-        toast.error(res.error);
-        return;
-      }
+      setPlantingRecords(
+        plantingRecords.map((r) =>
+          r.id === selectedRecord.id
+            ? {
+                ...r,
+                field: plantingForm.field,
+                variety: plantingForm.variety,
+                date: plantingForm.date,
+                area: plantingForm.area,
+                seedQuantity: plantingForm.seedQuantity,
+                expectedHarvest: plantingForm.expectedHarvest,
+                notes: plantingForm.notes,
+              }
+            : r,
+        ),
+      );
+      resetPlantingForm();
     } else if (selectedRecordType === "fertilizer") {
       setFertilizerRecords(
         fertilizerRecords.map((r) =>
@@ -599,14 +603,9 @@ const FarmRecords = () => {
     if (!selectedRecord) return;
 
     if (selectedRecordType === "planting") {
-      const plantingId = (selectedRecord as PlantingRecord).id;
-      const res = await deletePlantingRecord(plantingId);
-      if (res.success) {
-        setPlantingRecords((prev) => prev.filter((r) => r.id !== plantingId));
-      } else if (!res.success && res.error) {
-        toast.error(res.error);
-        return;
-      }
+      setPlantingRecords(
+        plantingRecords.filter((r) => r.id !== selectedRecord.id),
+      );
     } else if (selectedRecordType === "fertilizer") {
       setFertilizerRecords(
         fertilizerRecords.filter((r) => r.id !== selectedRecord.id),
@@ -624,25 +623,6 @@ const FarmRecords = () => {
 
   // Get field options for dropdowns
   const fieldOptions = fields.map((f) => `${f.name} - ${f.location}`);
-
-  const RICE_VARIETIES = [
-    "BG 300",
-    "BG 352",
-    "BG 358",
-    "BG 360",
-    "BG 369",
-    "BG 379-2",
-    "BG 403",
-    "BG 450",
-    "AT 362",
-    "AT 373",
-    "AT 401",
-    "Suwandel",
-    "Pachchaperumal",
-    "Kuruluthuda",
-    "Kalu Heenati",
-    "Madathawalu",
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -866,23 +846,166 @@ const FarmRecords = () => {
               />
             </TabsContent>
 
-            <PlantingRecordsSection
-              plantingRecords={plantingRecords}
-              plantingLoading={plantingLoading}
-              plantingSaving={plantingSaving}
-              isAddPlantingOpen={isAddPlantingOpen}
-              fieldOptions={fieldOptions}
-              riceVarieties={RICE_VARIETIES}
-              plantingForm={plantingForm}
-              setPlantingForm={setPlantingForm}
-              onAddPlanting={handleAddPlanting}
-              onOpenAddPlanting={setIsAddPlantingOpen}
-              onViewRecord={(record) => handleViewRecord(record, "planting")}
-              onEditRecord={(record) => handleEditRecord(record, "planting")}
-              onDeleteRecord={(record) =>
-                handleDeleteRecord(record, "planting")
-              }
-            />
+            {/* Planting Records */}
+            <TabsContent value="planting" className="space-y-4">
+              <Card className="border-border">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sprout className="w-5 h-5 text-primary" />
+                        Planting Records
+                      </CardTitle>
+                      <CardDescription>
+                        Track your planting activities and crop growth progress
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" className="gap-2">
+                        <Download className="w-4 h-4" />
+                        Export PDF
+                      </Button>
+                      <Button
+                        onClick={() => setIsAddPlantingOpen(true)}
+                        className="bg-linear-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Record
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {plantingRecords.map((record) => (
+                      <div
+                        key={record.id}
+                        className="p-5 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-primary/20"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={cn(
+                                "w-12 h-12 rounded-lg flex items-center justify-center",
+                                record.status === "Harvested"
+                                  ? "bg-linear-to-br from-amber-500 to-orange-600"
+                                  : "bg-linear-to-br from-emerald-500 to-teal-600",
+                              )}
+                            >
+                              {record.status === "Harvested" ? (
+                                <CheckCircle2 className="w-6 h-6 text-white" />
+                              ) : (
+                                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-foreground text-lg">
+                                {record.field}
+                              </h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge
+                                  variant={
+                                    record.status === "Growing"
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                >
+                                  {record.status}
+                                </Badge>
+                                <Badge variant="outline">
+                                  {record.variety}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleViewRecord(record, "planting")
+                              }
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleEditRecord(record, "planting")
+                              }
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() =>
+                                handleDeleteRecord(record, "planting")
+                              }
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">
+                              Planted:
+                            </span>
+                            <span className="text-foreground font-medium">
+                              {record.date}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Area:</span>
+                            <span className="text-foreground font-medium">
+                              {record.area}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Wheat className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">
+                              Seeds:
+                            </span>
+                            <span className="text-foreground font-medium">
+                              {record.seedQuantity}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">
+                              Harvest:
+                            </span>
+                            <span className="text-foreground font-medium">
+                              {record.expectedHarvest}
+                            </span>
+                          </div>
+                        </div>
+
+                        {record.status === "Growing" && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                Growth Progress
+                              </span>
+                              <span className="text-foreground font-semibold">
+                                {record.progress}%
+                              </span>
+                            </div>
+                            <Progress value={record.progress} className="h-2" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Fertilizer Records */}
             <TabsContent value="fertilizer" className="space-y-4">
@@ -1192,6 +1315,140 @@ const FarmRecords = () => {
           </Tabs>
         </div>
       </main>
+
+      {/* Add Planting Dialog */}
+      <Dialog open={isAddPlantingOpen} onOpenChange={setIsAddPlantingOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sprout className="w-5 h-5 text-primary" />
+              Add Planting Record
+            </DialogTitle>
+            <DialogDescription>
+              Record a new planting activity
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Field</Label>
+                <Select
+                  value={plantingForm.field}
+                  onValueChange={(v) =>
+                    setPlantingForm({ ...plantingForm, field: v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select field" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fieldOptions.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {f}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Rice Variety</Label>
+                <Select
+                  value={plantingForm.variety}
+                  onValueChange={(v) =>
+                    setPlantingForm({ ...plantingForm, variety: v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select variety" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BG 300">BG 300</SelectItem>
+                    <SelectItem value="BG 352">BG 352</SelectItem>
+                    <SelectItem value="BG 450">BG 450</SelectItem>
+                    <SelectItem value="AT 362">AT 362</SelectItem>
+                    <SelectItem value="BG 94-1">BG 94-1</SelectItem>
+                    <SelectItem value="Suwandel">Suwandel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Planting Date</Label>
+                <Input
+                  type="date"
+                  value={plantingForm.date}
+                  onChange={(e) =>
+                    setPlantingForm({ ...plantingForm, date: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Expected Harvest</Label>
+                <Input
+                  type="date"
+                  value={plantingForm.expectedHarvest}
+                  onChange={(e) =>
+                    setPlantingForm({
+                      ...plantingForm,
+                      expectedHarvest: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Area</Label>
+                <Input
+                  placeholder="e.g., 2.5 acres"
+                  value={plantingForm.area}
+                  onChange={(e) =>
+                    setPlantingForm({ ...plantingForm, area: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Seed Quantity</Label>
+                <Input
+                  placeholder="e.g., 50 kg"
+                  value={plantingForm.seedQuantity}
+                  onChange={(e) =>
+                    setPlantingForm({
+                      ...plantingForm,
+                      seedQuantity: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea
+                placeholder="Additional notes..."
+                value={plantingForm.notes}
+                onChange={(e) =>
+                  setPlantingForm({ ...plantingForm, notes: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddPlantingOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddPlanting}
+              className="bg-linear-to-r from-emerald-500 to-teal-600"
+            >
+              Save Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Fertilizer Dialog */}
       <Dialog open={isAddFertilizerOpen} onOpenChange={setIsAddFertilizerOpen}>
@@ -1566,7 +1823,7 @@ const FarmRecords = () => {
                         Area:
                       </span>
                       <p className="font-medium">
-                        {(selectedRecord as PlantingRecord).area} acres
+                        {(selectedRecord as PlantingRecord).area}
                       </p>
                     </div>
                     <div>
@@ -1574,7 +1831,7 @@ const FarmRecords = () => {
                         Seeds:
                       </span>
                       <p className="font-medium">
-                        {(selectedRecord as PlantingRecord).seedQuantity} kg
+                        {(selectedRecord as PlantingRecord).seedQuantity}
                       </p>
                     </div>
                     <div>
