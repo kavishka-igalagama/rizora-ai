@@ -13,6 +13,7 @@ export interface IField {
 }
 
 export interface IPlantingRecord {
+  _id: Types.ObjectId;
   field: string;
   variety: string;
   date: Date;
@@ -22,11 +23,12 @@ export interface IPlantingRecord {
   expectedHarvest?: Date;
   seedQuantity?: string;
   notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IFertilizerRecord {
+  _id: Types.ObjectId;
   field: string;
   type: string;
   quantity: string;
@@ -35,9 +37,12 @@ export interface IFertilizerRecord {
   stage?: string;
   method?: string;
   notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IHarvestRecord {
+  _id: Types.ObjectId;
   field: string;
   date: Date;
   yield: number;
@@ -48,6 +53,8 @@ export interface IHarvestRecord {
   variety?: string;
   soldTo?: string;
   notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IPaddyRecord extends Document {
@@ -95,7 +102,7 @@ const plantingSchema = new Schema<IPlantingRecord>(
     seedQuantity: { type: String },
     notes: { type: String },
   },
-  { _id: false },
+  { timestamps: true },
 );
 
 const fertilizerSchema = new Schema<IFertilizerRecord>(
@@ -109,7 +116,7 @@ const fertilizerSchema = new Schema<IFertilizerRecord>(
     method: { type: String },
     notes: { type: String },
   },
-  { _id: false },
+  { timestamps: true },
 );
 
 const harvestSchema = new Schema<IHarvestRecord>(
@@ -129,7 +136,7 @@ const harvestSchema = new Schema<IHarvestRecord>(
     soldTo: { type: String },
     notes: { type: String },
   },
-  { _id: false },
+  { timestamps: true },
 );
 
 const PaddyRecordSchema = new Schema<IPaddyRecord>(
@@ -143,9 +150,7 @@ const PaddyRecordSchema = new Schema<IPaddyRecord>(
     harvests: { type: [harvestSchema], default: [] },
     notes: { type: String },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
 const PaddyRecord: Model<IPaddyRecord> =

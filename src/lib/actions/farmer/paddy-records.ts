@@ -3,7 +3,12 @@
 import { auth } from "@clerk/nextjs/server";
 import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
-import PaddyRecord, { IField } from "@/lib/models/PaddyRecord";
+import PaddyRecord, {
+  IField,
+  IFertilizerRecord,
+  IHarvestRecord,
+  IPlantingRecord,
+} from "@/lib/models/PaddyRecord";
 
 interface FieldsData {
   name: string;
@@ -13,6 +18,67 @@ interface FieldsData {
   soilType: string;
   currentCrop?: string;
 }
+
+interface PlantingData {
+  field: string;
+  variety: string;
+  date: string;
+  area: string;
+  status?: "Growing" | "Harvested" | "Preparing";
+  progress?: number;
+  expectedHarvest?: string;
+  seedQuantity?: string;
+  notes?: string;
+}
+
+interface FertilizerData {
+  field: string;
+  type: string;
+  quantity: string;
+  date: string;
+  cost: number;
+  stage?: string;
+  method?: string;
+  notes?: string;
+}
+
+interface HarvestData {
+  field: string;
+  date: string;
+  yield: number;
+  quality: "Grade A" | "Grade B" | "Grade C";
+  revenue?: number;
+  pricePerKg?: number;
+  moisture?: string;
+  variety?: string;
+  soldTo?: string;
+  notes?: string;
+}
+
+const parseDateValue = (value?: string) => {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const parseNumberValue = (value?: number) => {
+  if (typeof value !== "number") return undefined;
+  return Number.isFinite(value) ? value : undefined;
+};
+
+const getOrCreateRecord = async (userId: string) => {
+  let record = await PaddyRecord.findOne({ clerkId: userId });
+  if (!record) {
+    record = await PaddyRecord.create({
+      clerkId: userId,
+      fields: [],
+      plantings: [],
+      fertilizerApplications: [],
+      harvests: [],
+    });
+  }
+  return record;
+};
 
 // Field Management Actions
 export async function addNewField(
@@ -37,16 +103,7 @@ export async function addNewField(
     }
 
     // Ensure the user has a record and append the field
-    let record = await PaddyRecord.findOne({ clerkId: userId });
-    if (!record) {
-      record = await PaddyRecord.create({
-        clerkId: userId,
-        fields: [],
-        plantings: [],
-        fertilizerApplications: [],
-        harvests: [],
-      });
-    }
+    const record = await getOrCreateRecord(userId);
 
     record.fields.push({
       name: data.name,
@@ -192,6 +249,622 @@ export async function deleteField(
     return {
       success: false,
       error: error?.message || "Failed to delete field",
+    };
+  }
+}
+
+export async function addPlantingRecord(
+  data: PlantingData,
+): Promise<{ success: boolean; error?: string; record?: IPlantingRecord }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    if (!data.field || !data.variety || !data.date || !data.area) {
+      return { success: false, error: "Missing required planting details" };
+    }
+
+    const plantingDate = parseDateValue(data.date);
+    if (!plantingDate) {
+      return { success: false, error: "Invalid planting date" };
+    }
+
+    const expectedHarvest = parseDateValue(data.expectedHarvest);
+    const record = await getOrCreateRecord(userId);
+
+    record.plantings.push({
+      field: data.field,
+      variety: data.variety,
+      date: plantingDate,
+      area: data.area,
+      status: data.status ?? "Growing",
+      progress: data.progress ?? 0,
+      expectedHarvest,
+      seedQuantity: data.seedQuantity || undefined,
+      notes: data.notes || undefined,
+    } as IPlantingRecord);
+
+    await record.save();
+    const saved = record.plantings[record.plantings.length - 1];
+
+    return {
+      success: true,
+      record: JSON.parse(JSON.stringify(saved)) as IPlantingRecord,
+    };
+  } catch (error: any) {
+    console.error("Error adding planting record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to add planting record",
+    };
+  }
+}
+
+export async function getPlantingRecords(): Promise<{
+  success: boolean;
+  error?: string;
+  records?: IPlantingRecord[];
+}> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const record = await PaddyRecord.findOne({ clerkId: userId }).lean();
+
+    return {
+      success: true,
+      records: JSON.parse(
+        JSON.stringify(record?.plantings ?? []),
+      ) as IPlantingRecord[],
+    };
+  } catch (error: any) {
+    console.error("Error fetching planting records:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch planting records",
+    };
+  }
+}
+
+export async function updatePlantingRecord(
+  recordId: string,
+  data: PlantingData,
+): Promise<{ success: boolean; error?: string; record?: IPlantingRecord }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    if (!data.field || !data.variety || !data.date || !data.area) {
+      return { success: false, error: "Missing required planting details" };
+    }
+
+    const plantingDate = parseDateValue(data.date);
+    if (!plantingDate) {
+      return { success: false, error: "Invalid planting date" };
+    }
+
+    const expectedHarvest = parseDateValue(data.expectedHarvest);
+    const updateSet: Record<string, unknown> = {
+      "plantings.$.field": data.field,
+      "plantings.$.variety": data.variety,
+      "plantings.$.date": plantingDate,
+      "plantings.$.area": data.area,
+    };
+
+    if (data.status) {
+      updateSet["plantings.$.status"] = data.status;
+    }
+
+    if (typeof data.progress === "number") {
+      updateSet["plantings.$.progress"] = data.progress;
+    }
+
+    const unset: Record<string, unknown> = {};
+    if (expectedHarvest) {
+      updateSet["plantings.$.expectedHarvest"] = expectedHarvest;
+    } else if (data.expectedHarvest !== undefined) {
+      unset["plantings.$.expectedHarvest"] = "";
+    }
+
+    if (data.seedQuantity) {
+      updateSet["plantings.$.seedQuantity"] = data.seedQuantity;
+    } else if (data.seedQuantity !== undefined) {
+      unset["plantings.$.seedQuantity"] = "";
+    }
+
+    if (data.notes) {
+      updateSet["plantings.$.notes"] = data.notes;
+    } else if (data.notes !== undefined) {
+      unset["plantings.$.notes"] = "";
+    }
+
+    const updateDoc: Record<string, unknown> = { $set: updateSet };
+    if (Object.keys(unset).length) {
+      updateDoc.$unset = unset;
+    }
+
+    const record = await PaddyRecord.findOneAndUpdate(
+      { clerkId: userId, "plantings._id": recordId },
+      updateDoc,
+      { new: true },
+    ).lean();
+
+    if (!record) {
+      return { success: false, error: "Record not found" };
+    }
+
+    const records = (record as { plantings: IPlantingRecord[] }).plantings;
+    const updated = records.find((r) => String(r._id) === String(recordId));
+    return {
+      success: true,
+      record: updated
+        ? (JSON.parse(JSON.stringify(updated)) as IPlantingRecord)
+        : undefined,
+    };
+  } catch (error: any) {
+    console.error("Error updating planting record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to update planting record",
+    };
+  }
+}
+
+export async function deletePlantingRecord(
+  recordId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const objectId = mongoose.Types.ObjectId.isValid(recordId)
+      ? new mongoose.Types.ObjectId(recordId)
+      : recordId;
+
+    await PaddyRecord.findOneAndUpdate(
+      { clerkId: userId },
+      { $pull: { plantings: { _id: objectId } } },
+    );
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting planting record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to delete planting record",
+    };
+  }
+}
+
+export async function addFertilizerRecord(
+  data: FertilizerData,
+): Promise<{ success: boolean; error?: string; record?: IFertilizerRecord }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    if (!data.field || !data.type || !data.quantity || !data.date) {
+      return { success: false, error: "Missing required fertilizer details" };
+    }
+
+    const cost = parseNumberValue(data.cost);
+    if (cost === undefined) {
+      return { success: false, error: "Invalid fertilizer cost" };
+    }
+
+    const applicationDate = parseDateValue(data.date);
+    if (!applicationDate) {
+      return { success: false, error: "Invalid application date" };
+    }
+
+    const record = await getOrCreateRecord(userId);
+
+    record.fertilizerApplications.push({
+      field: data.field,
+      type: data.type,
+      quantity: data.quantity,
+      date: applicationDate,
+      cost,
+      stage: data.stage || undefined,
+      method: data.method || undefined,
+      notes: data.notes || undefined,
+    } as IFertilizerRecord);
+
+    await record.save();
+    const saved =
+      record.fertilizerApplications[record.fertilizerApplications.length - 1];
+
+    return {
+      success: true,
+      record: JSON.parse(JSON.stringify(saved)) as IFertilizerRecord,
+    };
+  } catch (error: any) {
+    console.error("Error adding fertilizer record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to add fertilizer record",
+    };
+  }
+}
+
+export async function getFertilizerRecords(): Promise<{
+  success: boolean;
+  error?: string;
+  records?: IFertilizerRecord[];
+}> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const record = await PaddyRecord.findOne({ clerkId: userId }).lean();
+
+    return {
+      success: true,
+      records: JSON.parse(
+        JSON.stringify(record?.fertilizerApplications ?? []),
+      ) as IFertilizerRecord[],
+    };
+  } catch (error: any) {
+    console.error("Error fetching fertilizer records:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch fertilizer records",
+    };
+  }
+}
+
+export async function updateFertilizerRecord(
+  recordId: string,
+  data: FertilizerData,
+): Promise<{ success: boolean; error?: string; record?: IFertilizerRecord }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    if (!data.field || !data.type || !data.quantity || !data.date) {
+      return { success: false, error: "Missing required fertilizer details" };
+    }
+
+    const cost = parseNumberValue(data.cost);
+    if (cost === undefined) {
+      return { success: false, error: "Invalid fertilizer cost" };
+    }
+
+    const applicationDate = parseDateValue(data.date);
+    if (!applicationDate) {
+      return { success: false, error: "Invalid application date" };
+    }
+
+    const updateSet: Record<string, unknown> = {
+      "fertilizerApplications.$.field": data.field,
+      "fertilizerApplications.$.type": data.type,
+      "fertilizerApplications.$.quantity": data.quantity,
+      "fertilizerApplications.$.date": applicationDate,
+      "fertilizerApplications.$.cost": cost,
+    };
+
+    const unset: Record<string, unknown> = {};
+    if (data.stage) {
+      updateSet["fertilizerApplications.$.stage"] = data.stage;
+    } else if (data.stage !== undefined) {
+      unset["fertilizerApplications.$.stage"] = "";
+    }
+
+    if (data.method) {
+      updateSet["fertilizerApplications.$.method"] = data.method;
+    } else if (data.method !== undefined) {
+      unset["fertilizerApplications.$.method"] = "";
+    }
+
+    if (data.notes) {
+      updateSet["fertilizerApplications.$.notes"] = data.notes;
+    } else if (data.notes !== undefined) {
+      unset["fertilizerApplications.$.notes"] = "";
+    }
+
+    const updateDoc: Record<string, unknown> = { $set: updateSet };
+    if (Object.keys(unset).length) {
+      updateDoc.$unset = unset;
+    }
+
+    const record = await PaddyRecord.findOneAndUpdate(
+      { clerkId: userId, "fertilizerApplications._id": recordId },
+      updateDoc,
+      { new: true },
+    ).lean();
+
+    if (!record) {
+      return { success: false, error: "Record not found" };
+    }
+
+    const records = (record as { fertilizerApplications: IFertilizerRecord[] })
+      .fertilizerApplications;
+    const updated = records.find((r) => String(r._id) === String(recordId));
+    return {
+      success: true,
+      record: updated
+        ? (JSON.parse(JSON.stringify(updated)) as IFertilizerRecord)
+        : undefined,
+    };
+  } catch (error: any) {
+    console.error("Error updating fertilizer record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to update fertilizer record",
+    };
+  }
+}
+
+export async function deleteFertilizerRecord(
+  recordId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const objectId = mongoose.Types.ObjectId.isValid(recordId)
+      ? new mongoose.Types.ObjectId(recordId)
+      : recordId;
+
+    await PaddyRecord.findOneAndUpdate(
+      { clerkId: userId },
+      { $pull: { fertilizerApplications: { _id: objectId } } },
+    );
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting fertilizer record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to delete fertilizer record",
+    };
+  }
+}
+
+export async function addHarvestRecord(
+  data: HarvestData,
+): Promise<{ success: boolean; error?: string; record?: IHarvestRecord }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    if (!data.field || !data.date || !data.quality) {
+      return { success: false, error: "Missing required harvest details" };
+    }
+
+    const yieldValue = parseNumberValue(data.yield);
+    if (yieldValue === undefined) {
+      return { success: false, error: "Invalid harvest yield" };
+    }
+
+    const harvestDate = parseDateValue(data.date);
+    if (!harvestDate) {
+      return { success: false, error: "Invalid harvest date" };
+    }
+
+    const record = await getOrCreateRecord(userId);
+    record.harvests.push({
+      field: data.field,
+      date: harvestDate,
+      yield: yieldValue,
+      quality: data.quality,
+      revenue: parseNumberValue(data.revenue),
+      pricePerKg: parseNumberValue(data.pricePerKg),
+      moisture: data.moisture || undefined,
+      variety: data.variety || undefined,
+      soldTo: data.soldTo || undefined,
+      notes: data.notes || undefined,
+    } as IHarvestRecord);
+
+    await record.save();
+    const saved = record.harvests[record.harvests.length - 1];
+
+    return {
+      success: true,
+      record: JSON.parse(JSON.stringify(saved)) as IHarvestRecord,
+    };
+  } catch (error: any) {
+    console.error("Error adding harvest record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to add harvest record",
+    };
+  }
+}
+
+export async function getHarvestRecords(): Promise<{
+  success: boolean;
+  error?: string;
+  records?: IHarvestRecord[];
+}> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const record = await PaddyRecord.findOne({ clerkId: userId }).lean();
+
+    return {
+      success: true,
+      records: JSON.parse(
+        JSON.stringify(record?.harvests ?? []),
+      ) as IHarvestRecord[],
+    };
+  } catch (error: any) {
+    console.error("Error fetching harvest records:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch harvest records",
+    };
+  }
+}
+
+export async function updateHarvestRecord(
+  recordId: string,
+  data: HarvestData,
+): Promise<{ success: boolean; error?: string; record?: IHarvestRecord }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    if (!data.field || !data.date || !data.quality) {
+      return { success: false, error: "Missing required harvest details" };
+    }
+
+    const yieldValue = parseNumberValue(data.yield);
+    if (yieldValue === undefined) {
+      return { success: false, error: "Invalid harvest yield" };
+    }
+
+    const harvestDate = parseDateValue(data.date);
+    if (!harvestDate) {
+      return { success: false, error: "Invalid harvest date" };
+    }
+
+    const updateSet: Record<string, unknown> = {
+      "harvests.$.field": data.field,
+      "harvests.$.date": harvestDate,
+      "harvests.$.yield": yieldValue,
+      "harvests.$.quality": data.quality,
+    };
+
+    const unset: Record<string, unknown> = {};
+    const revenue = parseNumberValue(data.revenue);
+    if (revenue !== undefined) {
+      updateSet["harvests.$.revenue"] = revenue;
+    } else if (data.revenue !== undefined) {
+      unset["harvests.$.revenue"] = "";
+    }
+
+    const pricePerKg = parseNumberValue(data.pricePerKg);
+    if (pricePerKg !== undefined) {
+      updateSet["harvests.$.pricePerKg"] = pricePerKg;
+    } else if (data.pricePerKg !== undefined) {
+      unset["harvests.$.pricePerKg"] = "";
+    }
+
+    if (data.moisture) {
+      updateSet["harvests.$.moisture"] = data.moisture;
+    } else if (data.moisture !== undefined) {
+      unset["harvests.$.moisture"] = "";
+    }
+
+    if (data.variety) {
+      updateSet["harvests.$.variety"] = data.variety;
+    } else if (data.variety !== undefined) {
+      unset["harvests.$.variety"] = "";
+    }
+
+    if (data.soldTo) {
+      updateSet["harvests.$.soldTo"] = data.soldTo;
+    } else if (data.soldTo !== undefined) {
+      unset["harvests.$.soldTo"] = "";
+    }
+
+    if (data.notes) {
+      updateSet["harvests.$.notes"] = data.notes;
+    } else if (data.notes !== undefined) {
+      unset["harvests.$.notes"] = "";
+    }
+
+    const updateDoc: Record<string, unknown> = { $set: updateSet };
+    if (Object.keys(unset).length) {
+      updateDoc.$unset = unset;
+    }
+
+    const record = await PaddyRecord.findOneAndUpdate(
+      { clerkId: userId, "harvests._id": recordId },
+      updateDoc,
+      { new: true },
+    ).lean();
+
+    if (!record) {
+      return { success: false, error: "Record not found" };
+    }
+
+    const records = (record as { harvests: IHarvestRecord[] }).harvests;
+    const updated = records.find((r) => String(r._id) === String(recordId));
+    return {
+      success: true,
+      record: updated
+        ? (JSON.parse(JSON.stringify(updated)) as IHarvestRecord)
+        : undefined,
+    };
+  } catch (error: any) {
+    console.error("Error updating harvest record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to update harvest record",
+    };
+  }
+}
+
+export async function deleteHarvestRecord(
+  recordId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await connectDB();
+    const objectId = mongoose.Types.ObjectId.isValid(recordId)
+      ? new mongoose.Types.ObjectId(recordId)
+      : recordId;
+
+    await PaddyRecord.findOneAndUpdate(
+      { clerkId: userId },
+      { $pull: { harvests: { _id: objectId } } },
+    );
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting harvest record:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to delete harvest record",
     };
   }
 }

@@ -1,10 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFields } from "@/lib/actions/farmer/paddy-records";
+import {
+  addFertilizerRecord,
+  addHarvestRecord,
+  addPlantingRecord,
+  deleteFertilizerRecord,
+  deleteHarvestRecord,
+  deletePlantingRecord,
+  getFertilizerRecords,
+  getFields,
+  getHarvestRecords,
+  getPlantingRecords,
+  updateFertilizerRecord,
+  updateHarvestRecord,
+  updatePlantingRecord,
+} from "@/lib/actions/farmer/paddy-records";
 import FieldManagementSection, {
   type Field,
 } from "@/components/dashboard/farmer/FieldManagementSection";
+import PlantingRecordsSection, {
+  type PlantingRecord,
+} from "@/components/dashboard/farmer/PlantingRecordsSection";
+import FertilizerRecordsSection, {
+  type FertilizerRecord,
+} from "@/components/dashboard/farmer/FertilizerRecordsSection";
+import HarvestRecordsSection, {
+  type HarvestRecord,
+} from "@/components/dashboard/farmer/HarvestRecordsSection";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,24 +38,16 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
-  Plus,
-  Calendar,
   Droplets,
   Sprout,
   TrendingUp,
-  Download,
   Edit,
-  Trash2,
   Eye,
   PieChart,
   DollarSign,
   Wheat,
   MapPin,
-  Clock,
-  CheckCircle2,
-  Loader2,
   Layers,
   AlertCircle,
 } from "lucide-react";
@@ -65,47 +80,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-
-// Types
-interface PlantingRecord {
-  id: number;
-  field: string;
-  variety: string;
-  date: string;
-  area: string;
-  status: "Growing" | "Harvested" | "Preparing";
-  progress: number;
-  expectedHarvest: string;
-  seedQuantity: string;
-  notes?: string;
-}
-
-interface FertilizerRecord {
-  id: number;
-  field: string;
-  type: string;
-  quantity: string;
-  date: string;
-  cost: number;
-  stage: string;
-  method: string;
-  notes?: string;
-}
-
-interface HarvestRecord {
-  id: number;
-  field: string;
-  date: string;
-  yield: number;
-  quality: "Grade A" | "Grade B" | "Grade C";
-  revenue: number;
-  pricePerKg: number;
-  moisture: string;
-  variety: string;
-  soldTo?: string;
-  notes?: string;
-}
 
 const FarmRecords = () => {
   const [activeTab, setActiveTab] = useState("planting");
@@ -161,168 +135,199 @@ const FarmRecords = () => {
   });
 
   // Data states
-  const [plantingRecords, setPlantingRecords] = useState<PlantingRecord[]>([
-    {
-      id: 1,
-      field: "Field A - Kandalama",
-      variety: "BG 300",
-      date: "2025-09-15",
-      area: "2.5 acres",
-      status: "Growing",
-      progress: 65,
-      expectedHarvest: "2026-01-15",
-      seedQuantity: "50 kg",
-    },
-    {
-      id: 2,
-      field: "Field B - Dambulla",
-      variety: "BG 352",
-      date: "2025-10-01",
-      area: "3.0 acres",
-      status: "Growing",
-      progress: 45,
-      expectedHarvest: "2026-02-01",
-      seedQuantity: "60 kg",
-    },
-    {
-      id: 3,
-      field: "Field C - Sigiriya",
-      variety: "AT 362",
-      date: "2025-08-20",
-      area: "2.0 acres",
-      status: "Harvested",
-      progress: 100,
-      expectedHarvest: "2025-12-20",
-      seedQuantity: "40 kg",
-    },
-    {
-      id: 4,
-      field: "Field D - Habarana",
-      variety: "BG 450",
-      date: "2025-07-10",
-      area: "1.5 acres",
-      status: "Harvested",
-      progress: 100,
-      expectedHarvest: "2025-11-10",
-      seedQuantity: "30 kg",
-    },
-  ]);
+  const [plantingRecords, setPlantingRecords] = useState<PlantingRecord[]>([]);
 
   const [fertilizerRecords, setFertilizerRecords] = useState<
     FertilizerRecord[]
-  >([
-    {
-      id: 1,
-      field: "Field A - Kandalama",
-      type: "Urea (46-0-0)",
-      quantity: "50 kg",
-      date: "2025-10-15",
-      cost: 7500,
-      stage: "Tillering",
-      method: "Broadcasting",
-    },
-    {
-      id: 2,
-      field: "Field B - Dambulla",
-      type: "TSP (0-46-0)",
-      quantity: "40 kg",
-      date: "2025-10-20",
-      cost: 6000,
-      stage: "Basal",
-      method: "Incorporation",
-    },
-    {
-      id: 3,
-      field: "Field A - Kandalama",
-      type: "MOP (0-0-60)",
-      quantity: "30 kg",
-      date: "2025-11-01",
-      cost: 4500,
-      stage: "Panicle",
-      method: "Broadcasting",
-    },
-    {
-      id: 4,
-      field: "Field C - Sigiriya",
-      type: "Urea (46-0-0)",
-      quantity: "45 kg",
-      date: "2025-09-25",
-      cost: 6750,
-      stage: "Tillering",
-      method: "Broadcasting",
-    },
-    {
-      id: 5,
-      field: "Field B - Dambulla",
-      type: "Zinc Sulphate",
-      quantity: "10 kg",
-      date: "2025-10-25",
-      cost: 2500,
-      stage: "Active Growth",
-      method: "Foliar Spray",
-    },
-  ]);
+  >([]);
 
-  const [harvestRecords, setHarvestRecords] = useState<HarvestRecord[]>([
-    {
-      id: 1,
-      field: "Field C - Sigiriya",
-      date: "2025-12-20",
-      yield: 4800,
-      quality: "Grade A",
-      revenue: 408000,
-      pricePerKg: 85,
-      moisture: "14%",
-      variety: "AT 362",
-    },
-    {
-      id: 2,
-      field: "Field D - Habarana",
-      date: "2025-11-10",
-      yield: 3200,
-      quality: "Grade B",
-      revenue: 256000,
-      pricePerKg: 80,
-      moisture: "15%",
-      variety: "BG 450",
-    },
-    {
-      id: 3,
-      field: "Field E - Polonnaruwa",
-      date: "2025-10-05",
-      yield: 5500,
-      quality: "Grade A",
-      revenue: 467500,
-      pricePerKg: 85,
-      moisture: "13%",
-      variety: "BG 300",
-    },
-  ]);
+  const [harvestRecords, setHarvestRecords] = useState<HarvestRecord[]>([]);
 
   const [fields, setFields] = useState<Field[]>([]);
   const [fieldsLoading, setFieldsLoading] = useState(true);
+  const [plantingLoading, setPlantingLoading] = useState(true);
+  const [fertilizerLoading, setFertilizerLoading] = useState(true);
+  const [harvestLoading, setHarvestLoading] = useState(true);
+
+  const toDateInput = (value?: string | Date) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toISOString().slice(0, 10);
+  };
+
+  const mapPlantingRecord = (record: {
+    _id: { toString?: () => string } | string;
+    field: string;
+    variety: string;
+    date: string | Date;
+    area: string;
+    status?: "Growing" | "Harvested" | "Preparing";
+    progress?: number;
+    expectedHarvest?: string | Date;
+    seedQuantity?: string;
+    notes?: string;
+  }): PlantingRecord => ({
+    id:
+      typeof record._id === "string"
+        ? record._id
+        : (record._id?.toString?.() ?? ""),
+    field: record.field,
+    variety: record.variety,
+    date: toDateInput(record.date),
+    area: record.area,
+    status: record.status ?? "Growing",
+    progress: record.progress ?? 0,
+    expectedHarvest: toDateInput(record.expectedHarvest),
+    seedQuantity: record.seedQuantity ?? "",
+    notes: record.notes,
+  });
+
+  const mapFertilizerRecord = (record: {
+    _id: { toString?: () => string } | string;
+    field: string;
+    type: string;
+    quantity: string;
+    date: string | Date;
+    cost: number;
+    stage?: string;
+    method?: string;
+    notes?: string;
+  }): FertilizerRecord => ({
+    id:
+      typeof record._id === "string"
+        ? record._id
+        : (record._id?.toString?.() ?? ""),
+    field: record.field,
+    type: record.type,
+    quantity: record.quantity,
+    date: toDateInput(record.date),
+    cost: record.cost ?? 0,
+    stage: record.stage ?? "",
+    method: record.method ?? "",
+    notes: record.notes,
+  });
+
+  const mapHarvestRecord = (record: {
+    _id: { toString?: () => string } | string;
+    field: string;
+    date: string | Date;
+    yield: number;
+    quality: "Grade A" | "Grade B" | "Grade C";
+    revenue?: number;
+    pricePerKg?: number;
+    moisture?: string;
+    variety?: string;
+    soldTo?: string;
+    notes?: string;
+  }): HarvestRecord => {
+    const yieldValue = record.yield ?? 0;
+    const pricePerKg = record.pricePerKg ?? 0;
+    const revenue = record.revenue ?? yieldValue * pricePerKg;
+    return {
+      id:
+        typeof record._id === "string"
+          ? record._id
+          : (record._id?.toString?.() ?? ""),
+      field: record.field,
+      date: toDateInput(record.date),
+      yield: yieldValue,
+      quality: record.quality,
+      revenue,
+      pricePerKg,
+      moisture: record.moisture ?? "",
+      variety: record.variety ?? "",
+      soldTo: record.soldTo,
+      notes: record.notes,
+    };
+  };
 
   // Load fields from server on mount
   useEffect(() => {
     let cancelled = false;
-    getFields().then((res) => {
-      if (cancelled) return;
-      setFieldsLoading(false);
-      if (res.success && res.fields) {
-        setFields(
-          res.fields.map((f: { _id: { toString?: () => string } | string; name: string; location: string; area: string; status: "Active" | "Fallow" | "Preparing"; soilType: string; currentCrop?: string }) => ({
-            id: typeof f._id === "string" ? f._id : f._id?.toString?.() ?? "",
-            name: f.name,
-            location: f.location,
-            area: f.area,
-            status: f.status,
-            soilType: f.soilType,
-            currentCrop: f.currentCrop,
-          })),
-        );
-      }
-      if (!res.success && res.error) toast.error(res.error);
-    });
+    Promise.all([
+      getFields(),
+      getPlantingRecords(),
+      getFertilizerRecords(),
+      getHarvestRecords(),
+    ])
+      .then(([fieldsRes, plantingRes, fertilizerRes, harvestRes]) => {
+        if (cancelled) return;
+        setFieldsLoading(false);
+        setPlantingLoading(false);
+        setFertilizerLoading(false);
+        setHarvestLoading(false);
+
+        if (fieldsRes.success && fieldsRes.fields) {
+          setFields(
+            fieldsRes.fields.map(
+              (f: {
+                _id: { toString?: () => string } | string;
+                name: string;
+                location: string;
+                area: string;
+                status: "Active" | "Fallow" | "Preparing";
+                soilType: string;
+                currentCrop?: string;
+              }) => ({
+                id:
+                  typeof f._id === "string"
+                    ? f._id
+                    : (f._id?.toString?.() ?? ""),
+                name: f.name,
+                location: f.location,
+                area: f.area,
+                status: f.status,
+                soilType: f.soilType,
+                currentCrop: f.currentCrop,
+              }),
+            ),
+          );
+        }
+
+        if (plantingRes.success && plantingRes.records) {
+          setPlantingRecords(
+            plantingRes.records.map(
+              (r: Parameters<typeof mapPlantingRecord>[0]) =>
+                mapPlantingRecord(r),
+            ),
+          );
+        }
+
+        if (fertilizerRes.success && fertilizerRes.records) {
+          setFertilizerRecords(
+            fertilizerRes.records.map(
+              (r: Parameters<typeof mapFertilizerRecord>[0]) =>
+                mapFertilizerRecord(r),
+            ),
+          );
+        }
+
+        if (harvestRes.success && harvestRes.records) {
+          setHarvestRecords(
+            harvestRes.records.map(
+              (r: Parameters<typeof mapHarvestRecord>[0]) =>
+                mapHarvestRecord(r),
+            ),
+          );
+        }
+
+        if (!fieldsRes.success && fieldsRes.error) toast.error(fieldsRes.error);
+        if (!plantingRes.success && plantingRes.error)
+          toast.error(plantingRes.error);
+        if (!fertilizerRes.success && fertilizerRes.error)
+          toast.error(fertilizerRes.error);
+        if (!harvestRes.success && harvestRes.error)
+          toast.error(harvestRes.error);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFieldsLoading(false);
+        setPlantingLoading(false);
+        setFertilizerLoading(false);
+        setHarvestLoading(false);
+        toast.error("Failed to load paddy records");
+      });
     return () => {
       cancelled = true;
     };
@@ -336,10 +341,13 @@ const FarmRecords = () => {
   const activeFields = plantingRecords.filter(
     (r) => r.status === "Growing",
   ).length;
-  const totalYield = harvestRecords.reduce((sum, r) => sum + r.yield, 0);
-  const totalRevenue = harvestRecords.reduce((sum, r) => sum + r.revenue, 0);
+  const totalYield = harvestRecords.reduce((sum, r) => sum + (r.yield ?? 0), 0);
+  const totalRevenue = harvestRecords.reduce(
+    (sum, r) => sum + (r.revenue ?? 0),
+    0,
+  );
   const totalFertilizerCost = fertilizerRecords.reduce(
-    (sum, r) => sum + r.cost,
+    (sum, r) => sum + (r.cost ?? 0),
     0,
   );
   const avgYieldPerAcre =
@@ -354,7 +362,7 @@ const FarmRecords = () => {
   // Production Summary
   const productionSummary = {
     totalSeeds: plantingRecords.reduce(
-      (sum, r) => sum + parseInt(r.seedQuantity),
+      (sum, r) => sum + parseInt(r.seedQuantity || "0", 10),
       0,
     ),
     varieties: [...new Set(plantingRecords.map((r) => r.variety))],
@@ -398,60 +406,88 @@ const FarmRecords = () => {
       notes: "",
     });
   // Add record handlers
-  const handleAddPlanting = () => {
-    const newRecord: PlantingRecord = {
-      id: Date.now(),
+  const handleAddPlanting = async () => {
+    const res = await addPlantingRecord({
       field: plantingForm.field,
       variety: plantingForm.variety,
       date: plantingForm.date,
       area: plantingForm.area,
       status: "Growing",
       progress: 0,
-      expectedHarvest: plantingForm.expectedHarvest,
-      seedQuantity: plantingForm.seedQuantity,
-      notes: plantingForm.notes,
-    };
-    setPlantingRecords([newRecord, ...plantingRecords]);
+      expectedHarvest: plantingForm.expectedHarvest || undefined,
+      seedQuantity: plantingForm.seedQuantity || undefined,
+      notes: plantingForm.notes || undefined,
+    });
+    if (!res.success) {
+      toast.error(res.error ?? "Failed to add planting record");
+      return;
+    }
+    if (res.record) {
+      setPlantingRecords([
+        mapPlantingRecord(
+          res.record as Parameters<typeof mapPlantingRecord>[0],
+        ),
+        ...plantingRecords,
+      ]);
+    }
     setIsAddPlantingOpen(false);
     resetPlantingForm();
     toast.success("Planting record added successfully!");
   };
 
-  const handleAddFertilizer = () => {
-    const newRecord: FertilizerRecord = {
-      id: Date.now(),
+  const handleAddFertilizer = async () => {
+    const res = await addFertilizerRecord({
       field: fertilizerForm.field,
       type: fertilizerForm.type,
       quantity: fertilizerForm.quantity,
       date: fertilizerForm.date,
       cost: parseFloat(fertilizerForm.cost) || 0,
-      stage: fertilizerForm.stage,
-      method: fertilizerForm.method,
-      notes: fertilizerForm.notes,
-    };
-    setFertilizerRecords([newRecord, ...fertilizerRecords]);
+      stage: fertilizerForm.stage || undefined,
+      method: fertilizerForm.method || undefined,
+      notes: fertilizerForm.notes || undefined,
+    });
+    if (!res.success) {
+      toast.error(res.error ?? "Failed to add fertilizer record");
+      return;
+    }
+    if (res.record) {
+      setFertilizerRecords([
+        mapFertilizerRecord(
+          res.record as Parameters<typeof mapFertilizerRecord>[0],
+        ),
+        ...fertilizerRecords,
+      ]);
+    }
     setIsAddFertilizerOpen(false);
     resetFertilizerForm();
     toast.success("Fertilizer record added successfully!");
   };
 
-  const handleAddHarvest = () => {
+  const handleAddHarvest = async () => {
     const yieldAmount = parseFloat(harvestForm.yield) || 0;
     const pricePerKg = parseFloat(harvestForm.pricePerKg) || 0;
-    const newRecord: HarvestRecord = {
-      id: Date.now(),
+    const res = await addHarvestRecord({
       field: harvestForm.field,
       date: harvestForm.date,
       yield: yieldAmount,
       quality: harvestForm.quality as "Grade A" | "Grade B" | "Grade C",
       revenue: yieldAmount * pricePerKg,
       pricePerKg: pricePerKg,
-      moisture: harvestForm.moisture,
-      variety: harvestForm.variety,
-      soldTo: harvestForm.soldTo,
-      notes: harvestForm.notes,
-    };
-    setHarvestRecords([newRecord, ...harvestRecords]);
+      moisture: harvestForm.moisture || undefined,
+      variety: harvestForm.variety || undefined,
+      soldTo: harvestForm.soldTo || undefined,
+      notes: harvestForm.notes || undefined,
+    });
+    if (!res.success) {
+      toast.error(res.error ?? "Failed to add harvest record");
+      return;
+    }
+    if (res.record) {
+      setHarvestRecords([
+        mapHarvestRecord(res.record as Parameters<typeof mapHarvestRecord>[0]),
+        ...harvestRecords,
+      ]);
+    }
     setIsAddHarvestOpen(false);
     resetHarvestForm();
     toast.success("Harvest record added successfully!");
@@ -520,67 +556,84 @@ const FarmRecords = () => {
     if (!selectedRecord) return;
 
     if (selectedRecordType === "planting") {
-      setPlantingRecords(
-        plantingRecords.map((r) =>
-          r.id === selectedRecord.id
-            ? {
-                ...r,
-                field: plantingForm.field,
-                variety: plantingForm.variety,
-                date: plantingForm.date,
-                area: plantingForm.area,
-                seedQuantity: plantingForm.seedQuantity,
-                expectedHarvest: plantingForm.expectedHarvest,
-                notes: plantingForm.notes,
-              }
-            : r,
-        ),
-      );
+      const record = selectedRecord as PlantingRecord;
+      const res = await updatePlantingRecord(String(record.id), {
+        field: plantingForm.field,
+        variety: plantingForm.variety,
+        date: plantingForm.date,
+        area: plantingForm.area,
+        status: record.status,
+        progress: record.progress,
+        seedQuantity: plantingForm.seedQuantity || undefined,
+        expectedHarvest: plantingForm.expectedHarvest || undefined,
+        notes: plantingForm.notes || undefined,
+      });
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to update planting record");
+        return;
+      }
+      if (res.record) {
+        const mapped = mapPlantingRecord(
+          res.record as Parameters<typeof mapPlantingRecord>[0],
+        );
+        setPlantingRecords(
+          plantingRecords.map((r) => (r.id === record.id ? mapped : r)),
+        );
+      }
       resetPlantingForm();
     } else if (selectedRecordType === "fertilizer") {
-      setFertilizerRecords(
-        fertilizerRecords.map((r) =>
-          r.id === selectedRecord.id
-            ? {
-                ...r,
-                field: fertilizerForm.field,
-                type: fertilizerForm.type,
-                quantity: fertilizerForm.quantity,
-                date: fertilizerForm.date,
-                cost: parseFloat(fertilizerForm.cost) || 0,
-                stage: fertilizerForm.stage,
-                method: fertilizerForm.method,
-                notes: fertilizerForm.notes,
-              }
-            : r,
-        ),
-      );
+      const record = selectedRecord as FertilizerRecord;
+      const res = await updateFertilizerRecord(String(record.id), {
+        field: fertilizerForm.field,
+        type: fertilizerForm.type,
+        quantity: fertilizerForm.quantity,
+        date: fertilizerForm.date,
+        cost: parseFloat(fertilizerForm.cost) || 0,
+        stage: fertilizerForm.stage || undefined,
+        method: fertilizerForm.method || undefined,
+        notes: fertilizerForm.notes || undefined,
+      });
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to update fertilizer record");
+        return;
+      }
+      if (res.record) {
+        const mapped = mapFertilizerRecord(
+          res.record as Parameters<typeof mapFertilizerRecord>[0],
+        );
+        setFertilizerRecords(
+          fertilizerRecords.map((r) => (r.id === record.id ? mapped : r)),
+        );
+      }
       resetFertilizerForm();
     } else if (selectedRecordType === "harvest") {
       const yieldAmount = parseFloat(harvestForm.yield) || 0;
       const pricePerKg = parseFloat(harvestForm.pricePerKg) || 0;
-      setHarvestRecords(
-        harvestRecords.map((r) =>
-          r.id === selectedRecord.id
-            ? {
-                ...r,
-                field: harvestForm.field,
-                date: harvestForm.date,
-                yield: yieldAmount,
-                quality: harvestForm.quality as
-                  | "Grade A"
-                  | "Grade B"
-                  | "Grade C",
-                revenue: yieldAmount * pricePerKg,
-                pricePerKg,
-                moisture: harvestForm.moisture,
-                variety: harvestForm.variety,
-                soldTo: harvestForm.soldTo,
-                notes: harvestForm.notes,
-              }
-            : r,
-        ),
-      );
+      const record = selectedRecord as HarvestRecord;
+      const res = await updateHarvestRecord(String(record.id), {
+        field: harvestForm.field,
+        date: harvestForm.date,
+        yield: yieldAmount,
+        quality: harvestForm.quality as "Grade A" | "Grade B" | "Grade C",
+        revenue: yieldAmount * pricePerKg,
+        pricePerKg,
+        moisture: harvestForm.moisture || undefined,
+        variety: harvestForm.variety || undefined,
+        soldTo: harvestForm.soldTo || undefined,
+        notes: harvestForm.notes || undefined,
+      });
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to update harvest record");
+        return;
+      }
+      if (res.record) {
+        const mapped = mapHarvestRecord(
+          res.record as Parameters<typeof mapHarvestRecord>[0],
+        );
+        setHarvestRecords(
+          harvestRecords.map((r) => (r.id === record.id ? mapped : r)),
+        );
+      }
       resetHarvestForm();
     }
 
@@ -603,14 +656,29 @@ const FarmRecords = () => {
     if (!selectedRecord) return;
 
     if (selectedRecordType === "planting") {
+      const res = await deletePlantingRecord(String(selectedRecord.id));
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to delete planting record");
+        return;
+      }
       setPlantingRecords(
         plantingRecords.filter((r) => r.id !== selectedRecord.id),
       );
     } else if (selectedRecordType === "fertilizer") {
+      const res = await deleteFertilizerRecord(String(selectedRecord.id));
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to delete fertilizer record");
+        return;
+      }
       setFertilizerRecords(
         fertilizerRecords.filter((r) => r.id !== selectedRecord.id),
       );
     } else if (selectedRecordType === "harvest") {
+      const res = await deleteHarvestRecord(String(selectedRecord.id));
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to delete harvest record");
+        return;
+      }
       setHarvestRecords(
         harvestRecords.filter((r) => r.id !== selectedRecord.id),
       );
@@ -848,469 +916,40 @@ const FarmRecords = () => {
 
             {/* Planting Records */}
             <TabsContent value="planting" className="space-y-4">
-              <Card className="border-border">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Sprout className="w-5 h-5 text-primary" />
-                        Planting Records
-                      </CardTitle>
-                      <CardDescription>
-                        Track your planting activities and crop growth progress
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" className="gap-2">
-                        <Download className="w-4 h-4" />
-                        Export PDF
-                      </Button>
-                      <Button
-                        onClick={() => setIsAddPlantingOpen(true)}
-                        className="bg-linear-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 gap-2"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Record
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {plantingRecords.map((record) => (
-                      <div
-                        key={record.id}
-                        className="p-5 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-primary/20"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "w-12 h-12 rounded-lg flex items-center justify-center",
-                                record.status === "Harvested"
-                                  ? "bg-linear-to-br from-amber-500 to-orange-600"
-                                  : "bg-linear-to-br from-emerald-500 to-teal-600",
-                              )}
-                            >
-                              {record.status === "Harvested" ? (
-                                <CheckCircle2 className="w-6 h-6 text-white" />
-                              ) : (
-                                <Loader2 className="w-6 h-6 text-white animate-spin" />
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-foreground text-lg">
-                                {record.field}
-                              </h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge
-                                  variant={
-                                    record.status === "Growing"
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                >
-                                  {record.status}
-                                </Badge>
-                                <Badge variant="outline">
-                                  {record.variety}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleViewRecord(record, "planting")
-                              }
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleEditRecord(record, "planting")
-                              }
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleDeleteRecord(record, "planting")
-                              }
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              Planted:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.date}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Area:</span>
-                            <span className="text-foreground font-medium">
-                              {record.area}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Wheat className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              Seeds:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.seedQuantity}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              Harvest:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.expectedHarvest}
-                            </span>
-                          </div>
-                        </div>
-
-                        {record.status === "Growing" && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                Growth Progress
-                              </span>
-                              <span className="text-foreground font-semibold">
-                                {record.progress}%
-                              </span>
-                            </div>
-                            <Progress value={record.progress} className="h-2" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <PlantingRecordsSection
+                records={plantingRecords}
+                loading={plantingLoading}
+                onAdd={() => setIsAddPlantingOpen(true)}
+                onView={(record) => handleViewRecord(record, "planting")}
+                onEdit={(record) => handleEditRecord(record, "planting")}
+                onDelete={(record) => handleDeleteRecord(record, "planting")}
+              />
             </TabsContent>
 
             {/* Fertilizer Records */}
             <TabsContent value="fertilizer" className="space-y-4">
-              <Card className="border-border">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Droplets className="w-5 h-5 text-blue-500" />
-                        Fertilizer Application Records
-                      </CardTitle>
-                      <CardDescription>
-                        Monitor fertilizer usage, costs, and application
-                        schedules
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" className="gap-2">
-                        <Download className="w-4 h-4" />
-                        Export PDF
-                      </Button>
-                      <Button
-                        onClick={() => setIsAddFertilizerOpen(true)}
-                        className="bg-linear-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 gap-2"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Record
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {fertilizerRecords.map((record) => (
-                      <div
-                        key={record.id}
-                        className="p-5 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-blue-500/20"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                              <Droplets className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-foreground">
-                                {record.field}
-                              </h4>
-                              <p className="text-sm text-muted-foreground">
-                                {record.type}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className="text-blue-600 border-blue-600/30"
-                            >
-                              {record.stage}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleViewRecord(record, "fertilizer")
-                              }
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleEditRecord(record, "fertilizer")
-                              }
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleDeleteRecord(record, "fertilizer")
-                              }
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">
-                              Quantity:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.quantity}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">Date:</span>
-                            <span className="text-foreground font-medium">
-                              {record.date}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">
-                              Method:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.method}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">Cost:</span>
-                            <span className="text-primary font-bold">
-                              Rs {record.cost.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 p-5 rounded-xl bg-linear-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                          <DollarSign className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-lg font-medium text-foreground">
-                          Total Fertilizer Cost
-                        </span>
-                      </div>
-                      <span className="text-2xl font-bold text-primary">
-                        Rs {totalFertilizerCost.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <FertilizerRecordsSection
+                records={fertilizerRecords}
+                loading={fertilizerLoading}
+                totalCost={totalFertilizerCost}
+                onAdd={() => setIsAddFertilizerOpen(true)}
+                onView={(record) => handleViewRecord(record, "fertilizer")}
+                onEdit={(record) => handleEditRecord(record, "fertilizer")}
+                onDelete={(record) => handleDeleteRecord(record, "fertilizer")}
+              />
             </TabsContent>
 
             {/* Harvest Records */}
             <TabsContent value="harvest" className="space-y-4">
-              <Card className="border-border">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Wheat className="w-5 h-5 text-amber-500" />
-                        Harvest Records
-                      </CardTitle>
-                      <CardDescription>
-                        Track your yields, quality grades, and revenue
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" className="gap-2">
-                        <Download className="w-4 h-4" />
-                        Export PDF
-                      </Button>
-                      <Button
-                        onClick={() => setIsAddHarvestOpen(true)}
-                        className="bg-linear-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 gap-2"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Record
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {harvestRecords.map((record) => (
-                      <div
-                        key={record.id}
-                        className="p-5 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-amber-500/20"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg bg-linear-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                              <Wheat className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-foreground text-lg">
-                                {record.field}
-                              </h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge
-                                  className={
-                                    record.quality === "Grade A"
-                                      ? "bg-emerald-500"
-                                      : record.quality === "Grade B"
-                                        ? "bg-amber-500"
-                                        : "bg-orange-500"
-                                  }
-                                >
-                                  {record.quality}
-                                </Badge>
-                                <Badge variant="outline">
-                                  {record.variety}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="text-2xl font-bold text-primary">
-                                Rs {record.revenue.toLocaleString()}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                @ Rs {record.pricePerKg}/kg
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  handleViewRecord(record, "harvest")
-                                }
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  handleEditRecord(record, "harvest")
-                                }
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() =>
-                                  handleDeleteRecord(record, "harvest")
-                                }
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              Harvested:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.date}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Wheat className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              Yield:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.yield.toLocaleString()} kg
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Droplets className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                              Moisture:
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {record.moisture}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="w-4 h-4 text-primary" />
-                            <span className="text-muted-foreground">
-                              Status:
-                            </span>
-                            <span className="text-primary font-medium">
-                              Sold
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 p-5 rounded-xl bg-linear-to-r from-primary/10 to-emerald-500/10 border border-primary/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-linear-to-br from-primary to-emerald-600 flex items-center justify-center">
-                          <TrendingUp className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-lg font-medium text-foreground">
-                          Total Revenue
-                        </span>
-                      </div>
-                      <span className="text-2xl font-bold text-primary">
-                        Rs {totalRevenue.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <HarvestRecordsSection
+                records={harvestRecords}
+                loading={harvestLoading}
+                totalRevenue={totalRevenue}
+                onAdd={() => setIsAddHarvestOpen(true)}
+                onView={(record) => handleViewRecord(record, "harvest")}
+                onEdit={(record) => handleEditRecord(record, "harvest")}
+                onDelete={(record) => handleDeleteRecord(record, "harvest")}
+              />
             </TabsContent>
           </Tabs>
         </div>

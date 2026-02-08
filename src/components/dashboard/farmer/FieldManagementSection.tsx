@@ -517,12 +517,23 @@ const FieldManagementSection = ({
               </div>
               <div className="space-y-2">
                 <Label>Soil Type</Label>
-                <Input
+                <Select
                   value={fieldForm.soilType}
-                  onChange={(e) =>
-                    setFieldForm({ ...fieldForm, soilType: e.target.value })
+                  onValueChange={(v) =>
+                    setFieldForm({ ...fieldForm, soilType: v })
                   }
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select soil type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Clay">Clay</SelectItem>
+                    <SelectItem value="Clay Loam">Clay Loam</SelectItem>
+                    <SelectItem value="Loam">Loam</SelectItem>
+                    <SelectItem value="Sandy Loam">Sandy Loam</SelectItem>
+                    <SelectItem value="Sandy">Sandy</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
