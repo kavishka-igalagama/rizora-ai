@@ -82,7 +82,7 @@ const PaddyRecordsStats: FC<PaddyRecordsStatsProps> = ({
           <div>
             <p className="text-xs text-muted-foreground">Revenue</p>
             <p className="text-xl font-bold text-foreground">
-              Rs{totalRevenue.toLocaleString()}
+              Rs {totalRevenue.toLocaleString()}
             </p>
           </div>
         </div>
@@ -96,9 +96,9 @@ const PaddyRecordsStats: FC<PaddyRecordsStatsProps> = ({
             <Droplets className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Fert. Cost</p>
+            <p className="text-xs text-muted-foreground">Fertilizer Cost</p>
             <p className="text-xl font-bold text-foreground">
-              Rs{totalFertilizerCost.toLocaleString()}
+              Rs {totalFertilizerCost.toLocaleString()}
             </p>
           </div>
         </div>

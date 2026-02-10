@@ -48,6 +48,42 @@ interface PlantingRecordsSectionProps {
   onDelete: (record: PlantingRecord) => void;
 }
 
+const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
+
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseDateValue = (value?: string) => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+
+  if (DATE_ONLY_REGEX.test(trimmed)) {
+    const parsed = new Date(`${trimmed}T00:00:00+05:30`);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const getGrowthProgress = (record: PlantingRecord) => {
+  if (record.status === "Harvested") return 100;
+  if (record.status === "Preparing") return 0;
+
+  const plantedOn = parseDateValue(record.date);
+  const harvestOn = parseDateValue(record.expectedHarvest);
+
+  if (!plantedOn || !harvestOn || harvestOn <= plantedOn) {
+    return clampPercent(Math.round(record.progress ?? 0));
+  }
+
+  const now = new Date();
+  const totalMs = harvestOn.getTime() - plantedOn.getTime();
+  const elapsedMs = now.getTime() - plantedOn.getTime();
+  const percent = (elapsedMs / totalMs) * 100;
+
+  return clampPercent(Math.round(percent));
+};
+
 const PlantingRecordsSection = ({
   records,
   loading,
@@ -91,115 +127,122 @@ const PlantingRecordsSection = ({
         </div>
       ) : (
         <div className="space-y-4">
-          {records.map((record) => (
-            <div
-              key={record.id}
-              className="p-5 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-primary/20"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-lg flex items-center justify-center",
-                      record.status === "Harvested"
-                        ? "bg-linear-to-br from-amber-500 to-orange-600"
-                        : "bg-linear-to-br from-emerald-500 to-teal-600",
-                    )}
-                  >
-                    {record.status === "Harvested" ? (
-                      <CheckCircle2 className="w-6 h-6 text-white" />
-                    ) : (
-                      <Loader2 className="w-6 h-6 text-white animate-spin" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground text-lg">
-                      {record.field}
-                    </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge
-                        variant={
-                          record.status === "Growing" ? "default" : "secondary"
-                        }
-                      >
-                        {record.status}
-                      </Badge>
-                      <Badge variant="outline">{record.variety}</Badge>
+          {records.map((record) => {
+            const progressValue = getGrowthProgress(record);
+            return (
+              <div
+                key={record.id}
+                className="p-5 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-primary/20"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "w-12 h-12 rounded-lg flex items-center justify-center",
+                        record.status === "Harvested"
+                          ? "bg-linear-to-br from-amber-500 to-orange-600"
+                          : "bg-linear-to-br from-emerald-500 to-teal-600",
+                      )}
+                    >
+                      {record.status === "Harvested" ? (
+                        <CheckCircle2 className="w-6 h-6 text-white" />
+                      ) : (
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground text-lg">
+                        {record.field}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge
+                          variant={
+                            record.status === "Growing"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {record.status}
+                        </Badge>
+                        <Badge variant="outline">{record.variety}</Badge>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onView(record)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(record)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => onDelete(record)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onView(record)}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEdit(record)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => onDelete(record)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Planted:</span>
-                  <span className="text-foreground font-medium">
-                    {record.date}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Area:</span>
-                  <span className="text-foreground font-medium">
-                    {record.area} acres
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Wheat className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Seeds:</span>
-                  <span className="text-foreground font-medium">
-                    {record.seedQuantity} kg
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Harvest:</span>
-                  <span className="text-foreground font-medium">
-                    {record.expectedHarvest}
-                  </span>
-                </div>
-              </div>
-
-              {record.status === "Growing" && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Growth Progress
-                    </span>
-                    <span className="text-foreground font-semibold">
-                      {record.progress}%
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Planted:</span>
+                    <span className="text-foreground font-medium">
+                      {record.date}
                     </span>
                   </div>
-                  <Progress value={record.progress} className="h-2" />
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Area:</span>
+                    <span className="text-foreground font-medium">
+                      {record.area} acres
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Wheat className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Seeds:</span>
+                    <span className="text-foreground font-medium">
+                      {record.seedQuantity} kg
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Harvest:</span>
+                    <span className="text-foreground font-medium">
+                      {record.expectedHarvest}
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {record.status !== "Harvested" ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Growth Progress
+                      </span>
+                      <span className="text-foreground font-semibold">
+                        {progressValue}%
+                      </span>
+                    </div>
+                    <Progress value={progressValue} className="h-2" />
+                  </div>
+                ) : (
+                  <div></div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </CardContent>

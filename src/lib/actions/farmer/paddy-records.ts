@@ -55,10 +55,35 @@ interface HarvestData {
   notes?: string;
 }
 
-const parseDateValue = (value?: string) => {
+const toValidDate = (value?: string | Date) => {
   if (!value) return undefined;
-  const parsed = new Date(value);
+  const parsed = value instanceof Date ? value : new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const parseDateValue = (value?: string | Date) => toValidDate(value);
+
+const clampPercent = (value: number) =>
+  Math.min(100, Math.max(0, Math.round(value)));
+
+const calculateGrowthProgress = (
+  record: IPlantingRecord,
+  now: Date = new Date(),
+) => {
+  if (record.status === "Harvested") return 100;
+
+  const plantedOn = toValidDate(record.date);
+  const harvestOn = toValidDate(record.expectedHarvest);
+
+  if (!plantedOn || !harvestOn || harvestOn <= plantedOn) {
+    return clampPercent(record.progress ?? 0);
+  }
+
+  const totalMs = harvestOn.getTime() - plantedOn.getTime();
+  const elapsedMs = now.getTime() - plantedOn.getTime();
+  const percent = (elapsedMs / totalMs) * 100;
+
+  return clampPercent(percent);
 };
 
 const parseNumberValue = (value?: number) => {
@@ -317,12 +342,38 @@ export async function getPlantingRecords(): Promise<{
 
   try {
     await connectDB();
-    const record = await PaddyRecord.findOne({ clerkId: userId }).lean();
+    const record = await PaddyRecord.findOne({ clerkId: userId });
+
+    if (!record) {
+      return { success: true, records: [] };
+    }
+
+    const now = new Date();
+    let hasAutoHarvestUpdates = false;
+
+    record.plantings.forEach((planting) => {
+      const computedProgress = calculateGrowthProgress(planting, now);
+      const shouldHarvest = computedProgress >= 100;
+
+      if (shouldHarvest && planting.status !== "Harvested") {
+        planting.status = "Harvested";
+        hasAutoHarvestUpdates = true;
+      }
+
+      if (shouldHarvest && (planting.progress ?? 0) !== 100) {
+        planting.progress = 100;
+        hasAutoHarvestUpdates = true;
+      }
+    });
+
+    if (hasAutoHarvestUpdates) {
+      await record.save();
+    }
 
     return {
       success: true,
       records: JSON.parse(
-        JSON.stringify(record?.plantings ?? []),
+        JSON.stringify(record.plantings ?? []),
       ) as IPlantingRecord[],
     };
   } catch (error: any) {
@@ -362,13 +413,21 @@ export async function updatePlantingRecord(
       "plantings.$.date": plantingDate,
       "plantings.$.area": data.area,
     };
+    const statusIsHarvested = data.status === "Harvested";
+    const shouldHarvestFromProgress =
+      typeof data.progress === "number" && data.progress >= 100;
 
-    if (data.status) {
-      updateSet["plantings.$.status"] = data.status;
-    }
+    if (statusIsHarvested || shouldHarvestFromProgress) {
+      updateSet["plantings.$.status"] = "Harvested";
+      updateSet["plantings.$.progress"] = 100;
+    } else {
+      if (data.status) {
+        updateSet["plantings.$.status"] = data.status;
+      }
 
-    if (typeof data.progress === "number") {
-      updateSet["plantings.$.progress"] = data.progress;
+      if (typeof data.progress === "number") {
+        updateSet["plantings.$.progress"] = clampPercent(data.progress);
+      }
     }
 
     const unset: Record<string, unknown> = {};

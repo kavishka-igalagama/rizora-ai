@@ -18,7 +18,7 @@ export interface IPlantingRecord {
   variety: string;
   date: Date;
   area: string;
-  status: "Growing" | "Harvested" | "Preparing";
+  status: "Growing" | "Harvested";
   progress?: number;
   expectedHarvest?: Date;
   seedQuantity?: string;
@@ -94,7 +94,7 @@ const plantingSchema = new Schema<IPlantingRecord>(
     area: { type: String, required: true },
     status: {
       type: String,
-      enum: ["Growing", "Harvested", "Preparing"],
+      enum: ["Growing", "Harvested"],
       default: "Growing",
     },
     progress: { type: Number, min: 0, max: 100 },
