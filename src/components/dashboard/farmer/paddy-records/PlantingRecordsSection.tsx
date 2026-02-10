@@ -50,17 +50,8 @@ interface PlantingRecordsSectionProps {
 
 const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
 
-const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
 const parseDateValue = (value?: string) => {
   if (!value) return undefined;
-  const trimmed = value.trim();
-
-  if (DATE_ONLY_REGEX.test(trimmed)) {
-    const parsed = new Date(`${trimmed}T00:00:00+05:30`);
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-  }
-
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
