@@ -407,6 +407,7 @@ export async function updatePlantingRecord(
     }
 
     const expectedHarvest = parseDateValue(data.expectedHarvest);
+    const expectedHarvestProvided = data.expectedHarvest !== undefined;
     const updateSet: Record<string, unknown> = {
       "plantings.$.field": data.field,
       "plantings.$.variety": data.variety,
@@ -427,6 +428,29 @@ export async function updatePlantingRecord(
 
       if (typeof data.progress === "number") {
         updateSet["plantings.$.progress"] = clampPercent(data.progress);
+      }
+    }
+
+    if (expectedHarvestProvided && expectedHarvest) {
+      const autoProgress = calculateGrowthProgress({
+        date: plantingDate,
+        expectedHarvest,
+        status: "Growing",
+        progress:
+          typeof data.progress === "number"
+            ? clampPercent(data.progress)
+            : updateSet["plantings.$.progress"] || 0,
+        field: data.field,
+        variety: data.variety,
+        area: data.area,
+      } as unknown as IPlantingRecord);
+
+      if (autoProgress >= 100) {
+        updateSet["plantings.$.status"] = "Harvested";
+        updateSet["plantings.$.progress"] = 100;
+      } else {
+        updateSet["plantings.$.status"] = "Growing";
+        updateSet["plantings.$.progress"] = autoProgress;
       }
     }
 
