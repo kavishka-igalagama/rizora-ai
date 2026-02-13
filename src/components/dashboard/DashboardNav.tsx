@@ -69,7 +69,7 @@ export default function DashboardNav({
     },
     {
       label: "Communication Hub",
-      href: "/dashboard/messages",
+      href: "/dashboard/chat",
       icon: <MessageSquare className="h-5 w-5" />,
     },
   ];
