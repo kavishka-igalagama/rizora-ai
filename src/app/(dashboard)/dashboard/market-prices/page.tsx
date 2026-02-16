@@ -222,7 +222,7 @@ const MarketPrices = () => {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto px-4 py-8">
+      <main className="mx-auto px-8 py-8">
         <div className="mx-auto">
           <div className="mb-8 animate-fade-in">
             <h1 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
