@@ -67,11 +67,6 @@ export default function DashboardNav({
       href: "/dashboard/market-prices",
       icon: <TrendingUp className="h-5 w-5" />,
     },
-    {
-      label: "Communication Hub",
-      href: "/dashboard/chat",
-      icon: <MessageSquare className="h-5 w-5" />,
-    },
   ];
 
   const millLinks: NavLink[] = [
@@ -142,7 +137,12 @@ export default function DashboardNav({
 
   const commonLinks: NavLink[] = [
     {
-      href: "/notifications",
+      label: "Communication Hub",
+      href: "/dashboard/chat",
+      icon: <MessageSquare className="h-5 w-5" />,
+    },
+    {
+      href: "/dashboard/notifications",
       label: "Notifications",
       icon: <Bell className="h-5 w-5" />,
     },
