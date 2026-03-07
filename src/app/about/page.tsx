@@ -154,8 +154,8 @@ const AboutPage = async () => {
               Rice Disease Crisis in Sri Lanka
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Sri Lanka's rice cultivation faces significant challenges from
-              various diseases that threaten food security and farmer
+              Sri Lanka&apos;s rice cultivation faces significant challenges
+              from various diseases that threaten food security and farmer
               livelihoods. Traditional detection methods are often too slow,
               leading to widespread crop damage.
             </p>

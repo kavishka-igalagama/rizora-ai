@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,13 +9,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { LucideIcon } from "lucide-react";
 import {
-  Shield,
   MapPin,
   TrendingUp,
   Users,
-  Bell,
-  Settings,
-  LogOut,
   AlertTriangle,
   BookOpen,
   BarChart3,

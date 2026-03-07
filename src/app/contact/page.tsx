@@ -92,7 +92,7 @@ const ContactPage = () => {
           "Yes! Our platform connects you with registered agricultural officers in your region. You can send messages, share disease images, and receive expert guidance directly through the app.",
       },
     ],
-    []
+    [],
   );
 
   const emergencyContacts: EmergencyContact[] = useMemo(
@@ -116,7 +116,7 @@ const ContactPage = () => {
         icon: MessageSquare,
       },
     ],
-    []
+    [],
   );
 
   const handleChange =
@@ -161,8 +161,8 @@ const ContactPage = () => {
               Contact <span className="text-gradient-hero">Us</span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Have questions or need assistance? We're here to help you make the
-              most of Rizora AI.
+              Have questions or need assistance? We&apos;re here to help you
+              make the most of Rizora AI.
             </p>
           </div>
         </div>

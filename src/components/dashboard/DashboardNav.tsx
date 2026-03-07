@@ -4,7 +4,6 @@ import Link from "next/link";
 import { UserButton, useClerk } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import {
-  BadgeCheck,
   BarChart3,
   Bell,
   BookOpen,
@@ -53,24 +52,19 @@ export default function DashboardNav({
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      label: "AI Disease Detection",
+      label: "Disease Detection",
       href: "/dashboard/disease-detect",
       icon: <Microscope className="h-5 w-5" />,
     },
     {
-      label: "Digital Paddy Records",
-      href: "/dashboard/records",
+      label: "Paddy Records",
+      href: "/dashboard/paddy-records",
       icon: <BookOpen className="h-5 w-5" />,
     },
     {
       label: "Market Prices",
       href: "/dashboard/market-prices",
       icon: <TrendingUp className="h-5 w-5" />,
-    },
-    {
-      label: "Communication Hub",
-      href: "/dashboard/messages",
-      icon: <MessageSquare className="h-5 w-5" />,
     },
   ];
 
@@ -81,19 +75,14 @@ export default function DashboardNav({
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      href: "/dashboard/collections",
-      label: "Procurement Schedule",
-      icon: <Calendar className="h-5 w-5" />,
-    },
-    {
       href: "/dashboard/pricing",
       label: "Price Management",
       icon: <DollarSign className="h-5 w-5" />,
     },
     {
-      href: "/dashboard/quality",
-      label: "Quality & Grading",
-      icon: <BadgeCheck className="h-5 w-5" />,
+      href: "/dashboard/collections",
+      label: "Paddy Collections",
+      icon: <Calendar className="h-5 w-5" />,
     },
     {
       href: "/dashboard/reports",
@@ -142,7 +131,12 @@ export default function DashboardNav({
 
   const commonLinks: NavLink[] = [
     {
-      href: "/notifications",
+      label: "Communication Hub",
+      href: "/dashboard/chat",
+      icon: <MessageSquare className="h-5 w-5" />,
+    },
+    {
+      href: "/dashboard/notifications",
       label: "Notifications",
       icon: <Bell className="h-5 w-5" />,
     },
@@ -246,7 +240,7 @@ export default function DashboardNav({
 
       {/* User Profile Section */}
       <div className="px-3 py-3 border-t border-gray-100 space-y-3">
-        {commonLinks.map((link, index) => {
+        {commonLinks.map((link) => {
           const isActive = pathname === link.href;
           return (
             <div key={link.href}>

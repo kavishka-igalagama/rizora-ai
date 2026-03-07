@@ -31,10 +31,10 @@ import {
   Save,
   History,
   Sparkles,
-  Target,
   Zap,
   BookOpen,
 } from "lucide-react";
+import Image from "next/image";
 
 interface DetectionResult {
   disease: string;
@@ -416,7 +416,7 @@ const DiseaseDetection = () => {
                 {uploadedImage ? (
                   <div className="space-y-4">
                     <div className="relative">
-                      <img
+                      <Image
                         src={uploadedImage}
                         alt="Uploaded leaf"
                         className="w-full h-64 object-cover rounded-lg shadow-md"

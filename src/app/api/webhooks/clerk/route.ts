@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { Webhook } from "svix";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
+import User from "@/lib/models/User";
 
 export async function POST(req: Request) {
   console.log("🔔 Webhook received at /api/webhooks/clerk");
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
   if (!webhookSecret) {
     console.error(
-      "❌ CLERK_WEBHOOK_SECRET is not set in environment variables"
+      "❌ CLERK_WEBHOOK_SECRET is not set in environment variables",
     );
     return new Response("Webhook secret not configured", { status: 500 });
   }
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
           lastName: last_name,
           imageUrl: image_url,
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true },
       );
 
       console.log(`✅ User ${eventType}: ${id}`);

@@ -1,6 +1,21 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import connectDB from "@/lib/mongodb";
+import User from "@/lib/models/User";
 
 export type UserRole = "farmer" | "mill" | "officer";
+
+// Get current user's district from User schema (for pricing region etc.)
+export async function getCurrentUserDistrict(): Promise<string | null> {
+  const { userId } = await auth();
+  if (!userId) return null;
+  try {
+    await connectDB();
+    const user = await User.findOne({ clerkId: userId }).select("district").lean();
+    return user?.district ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Get the current user's role from Clerk public metadata
 export async function getUserRole(): Promise<UserRole | null> {
