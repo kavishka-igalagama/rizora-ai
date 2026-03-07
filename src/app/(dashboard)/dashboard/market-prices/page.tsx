@@ -12,17 +12,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
-  Leaf,
-  ArrowLeft,
   TrendingUp,
   TrendingDown,
   Minus,
   MapPin,
   Calendar,
-  DollarSign,
   Phone,
   MessageSquare,
-  Bell,
   RefreshCw,
   BarChart3,
   LineChart,

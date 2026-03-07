@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -66,6 +66,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import Loading from "@/components/loading";
 
 // ─── Local types ───────────────────────────────────────────────
 type QualityGrade = "A" | "B" | "C" | "D";
@@ -361,19 +362,29 @@ const PriceManagementPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchPrices = useCallback(async () => {
-    const result = await getPricings();
-    if (result.success && result.pricings) {
-      setPrices(result.pricings.map(mapPricingToEntry));
-    } else if (result.error) {
-      toast.error(result.error);
-    }
-    setIsLoading(false);
-  }, []);
-
   useEffect(() => {
-    fetchPrices();
-  }, [fetchPrices]);
+    let isMounted = true;
+
+    getPricings()
+      .then((result) => {
+        if (!isMounted) return;
+
+        if (result.success && result.pricings) {
+          setPrices(result.pricings.map(mapPricingToEntry));
+        } else if (result.error) {
+          toast.error(result.error);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     fetchCurrentUserDistrict().then((res) => {
@@ -585,15 +596,7 @@ const PriceManagementPage = () => {
   ];
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex">
-        <main className="flex-1 ml-65 p-8 transition-all duration-300">
-          <div className="flex items-center justify-center min-h-100">
-            <p className="text-muted-foreground">Loading prices...</p>
-          </div>
-        </main>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

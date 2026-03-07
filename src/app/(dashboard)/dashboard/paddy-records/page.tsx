@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   addFertilizerRecord,
   addHarvestRecord,
@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import PaddyRecordsStats from "@/components/dashboard/farmer/paddy-records/PaddyRecordsStats";
 import ProductionSummaryCard from "@/components/dashboard/farmer/paddy-records/ProductionSummaryCard";
 import PaddyRecordsDialogs from "@/components/dashboard/farmer/paddy-records/PaddyRecordsDialogs";
+import Loading from "@/components/loading";
 
 const FarmRecords = () => {
   const [activeTab, setActiveTab] = useState("planting");
@@ -102,99 +103,110 @@ const FarmRecords = () => {
   const [plantingLoading, setPlantingLoading] = useState(true);
   const [fertilizerLoading, setFertilizerLoading] = useState(true);
   const [harvestLoading, setHarvestLoading] = useState(true);
+  const isLoading =
+    fieldsLoading || plantingLoading || fertilizerLoading || harvestLoading;
 
-  const toDateInput = (value?: string | Date) => {
+  const toDateInput = useCallback((value?: string | Date) => {
     if (!value) return "";
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return "";
     return parsed.toISOString().slice(0, 10);
-  };
+  }, []);
 
-  const mapPlantingRecord = (record: {
-    _id: { toString?: () => string } | string;
-    field: string;
-    variety: string;
-    date: string | Date;
-    area: string;
-    status?: "Growing" | "Harvested" | "Preparing";
-    progress?: number;
-    expectedHarvest?: string | Date;
-    seedQuantity?: string;
-    notes?: string;
-  }): PlantingRecord => ({
-    id:
-      typeof record._id === "string"
-        ? record._id
-        : (record._id?.toString?.() ?? ""),
-    field: record.field,
-    variety: record.variety,
-    date: toDateInput(record.date),
-    area: record.area,
-    status: record.status ?? "Growing",
-    progress: record.progress ?? 0,
-    expectedHarvest: toDateInput(record.expectedHarvest),
-    seedQuantity: record.seedQuantity ?? "",
-    notes: record.notes,
-  });
-
-  const mapFertilizerRecord = (record: {
-    _id: { toString?: () => string } | string;
-    field: string;
-    type: string;
-    quantity: string;
-    date: string | Date;
-    cost: number;
-    stage?: string;
-    method?: string;
-    notes?: string;
-  }): FertilizerRecord => ({
-    id:
-      typeof record._id === "string"
-        ? record._id
-        : (record._id?.toString?.() ?? ""),
-    field: record.field,
-    type: record.type,
-    quantity: record.quantity,
-    date: toDateInput(record.date),
-    cost: record.cost ?? 0,
-    stage: record.stage ?? "",
-    method: record.method ?? "",
-    notes: record.notes,
-  });
-
-  const mapHarvestRecord = (record: {
-    _id: { toString?: () => string } | string;
-    field: string;
-    date: string | Date;
-    yield: number;
-    quality: "Grade A" | "Grade B" | "Grade C";
-    revenue?: number;
-    pricePerKg?: number;
-    moisture?: string;
-    variety?: string;
-    soldTo?: string;
-    notes?: string;
-  }): HarvestRecord => {
-    const yieldValue = record.yield ?? 0;
-    const pricePerKg = record.pricePerKg ?? 0;
-    const revenue = record.revenue ?? yieldValue * pricePerKg;
-    return {
+  const mapPlantingRecord = useCallback(
+    (record: {
+      _id: { toString?: () => string } | string;
+      field: string;
+      variety: string;
+      date: string | Date;
+      area: string;
+      status?: "Growing" | "Harvested" | "Preparing";
+      progress?: number;
+      expectedHarvest?: string | Date;
+      seedQuantity?: string;
+      notes?: string;
+    }): PlantingRecord => ({
       id:
         typeof record._id === "string"
           ? record._id
           : (record._id?.toString?.() ?? ""),
       field: record.field,
+      variety: record.variety,
       date: toDateInput(record.date),
-      yield: yieldValue,
-      quality: record.quality,
-      revenue,
-      pricePerKg,
-      moisture: record.moisture ?? "",
-      variety: record.variety ?? "",
-      soldTo: record.soldTo,
+      area: record.area,
+      status: record.status ?? "Growing",
+      progress: record.progress ?? 0,
+      expectedHarvest: toDateInput(record.expectedHarvest),
+      seedQuantity: record.seedQuantity ?? "",
       notes: record.notes,
-    };
-  };
+    }),
+    [toDateInput],
+  );
+
+  const mapFertilizerRecord = useCallback(
+    (record: {
+      _id: { toString?: () => string } | string;
+      field: string;
+      type: string;
+      quantity: string;
+      date: string | Date;
+      cost: number;
+      stage?: string;
+      method?: string;
+      notes?: string;
+    }): FertilizerRecord => ({
+      id:
+        typeof record._id === "string"
+          ? record._id
+          : (record._id?.toString?.() ?? ""),
+      field: record.field,
+      type: record.type,
+      quantity: record.quantity,
+      date: toDateInput(record.date),
+      cost: record.cost ?? 0,
+      stage: record.stage ?? "",
+      method: record.method ?? "",
+      notes: record.notes,
+    }),
+    [toDateInput],
+  );
+
+  const mapHarvestRecord = useCallback(
+    (record: {
+      _id: { toString?: () => string } | string;
+      field: string;
+      date: string | Date;
+      yield: number;
+      quality: "Grade A" | "Grade B" | "Grade C";
+      revenue?: number;
+      pricePerKg?: number;
+      moisture?: string;
+      variety?: string;
+      soldTo?: string;
+      notes?: string;
+    }): HarvestRecord => {
+      const yieldValue = record.yield ?? 0;
+      const pricePerKg = record.pricePerKg ?? 0;
+      const revenue = record.revenue ?? yieldValue * pricePerKg;
+      return {
+        id:
+          typeof record._id === "string"
+            ? record._id
+            : (record._id?.toString?.() ?? ""),
+        field: record.field,
+        date: toDateInput(record.date),
+        yield: yieldValue,
+        quality: record.quality,
+        revenue,
+        pricePerKg,
+        moisture: record.moisture ?? "",
+        variety: record.variety ?? "",
+        soldTo: record.soldTo,
+        notes: record.notes,
+      };
+    },
+    [toDateInput],
+  );
 
   // Load fields from server on mount
   useEffect(() => {
@@ -285,7 +297,7 @@ const FarmRecords = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [mapFertilizerRecord, mapHarvestRecord, mapPlantingRecord]);
 
   // Calculate statistics
   const totalArea = plantingRecords.reduce(
@@ -645,6 +657,10 @@ const FarmRecords = () => {
 
   // Get field options for dropdowns
   const fieldOptions = fields.map((f) => `${f.name} - ${f.location}`);
+
+  if (isLoading) {
+    return <Loading />;
+  }
 
   return (
     <div className="min-h-screen bg-background">

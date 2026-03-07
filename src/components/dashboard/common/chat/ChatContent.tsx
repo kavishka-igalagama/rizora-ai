@@ -16,6 +16,7 @@ import {
   Smile,
   Video,
 } from "lucide-react";
+import Image from "next/image";
 
 type Contact = {
   id: string;
@@ -78,8 +79,6 @@ const mockMessages: Record<string, Message[]> = {
       id: "m4",
       senderId: "me",
       type: "image",
-      imageUrl:
-        "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80",
       text: "Use this guideline for identification.",
       timestamp: "9:45 AM",
       isRead: true,
@@ -186,11 +185,15 @@ const ChatContent = () => {
                       )}
                       {message.type === "image" && (
                         <div className="space-y-2">
-                          <img
-                            src={message.imageUrl}
-                            alt="Shared image"
-                            className="rounded-lg max-w-full h-auto"
-                          />
+                          {message.imageUrl ? (
+                            <Image
+                              src={message.imageUrl}
+                              alt="Shared image"
+                              className="rounded-lg max-w-full h-auto"
+                              width={400}
+                              height={300}
+                            />
+                          ) : null}
                           {message.text && (
                             <p className="text-sm">{message.text}</p>
                           )}

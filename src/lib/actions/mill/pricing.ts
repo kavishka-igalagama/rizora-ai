@@ -13,6 +13,9 @@ export async function fetchCurrentUserDistrict(): Promise<{
   return { success: true, district: district ?? undefined };
 }
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 interface PricingData {
   region?: string;
   variety: string;
@@ -60,9 +63,12 @@ export async function addNewPricing(
       success: true,
       field: JSON.parse(JSON.stringify(pricing)) as IPricing,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error adding new pricing:", error);
-    return { success: false, error: error?.message || "Failed to add pricing" };
+    return {
+      success: false,
+      error: getErrorMessage(error, "Failed to add pricing"),
+    };
   }
 }
 
@@ -86,11 +92,11 @@ export async function getPricings(): Promise<{
       success: true,
       pricings: JSON.parse(JSON.stringify(pricings)) as IPricing[],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching pricings:", error);
     return {
       success: false,
-      error: error?.message || "Failed to fetch pricings",
+      error: getErrorMessage(error, "Failed to fetch pricings"),
     };
   }
 }
@@ -128,11 +134,11 @@ export async function updatePricing(
       success: true,
       field: JSON.parse(JSON.stringify(pricing)) as IPricing,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating pricing:", error);
     return {
       success: false,
-      error: error?.message || "Failed to update pricing",
+      error: getErrorMessage(error, "Failed to update pricing"),
     };
   }
 }
@@ -156,11 +162,11 @@ export async function deletePricing(
       return { success: false, error: "Pricing not found or access denied" };
     }
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting pricing:", error);
     return {
       success: false,
-      error: error?.message || "Failed to delete pricing",
+      error: getErrorMessage(error, "Failed to delete pricing"),
     };
   }
 }

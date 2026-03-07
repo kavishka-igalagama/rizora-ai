@@ -91,6 +91,9 @@ const parseNumberValue = (value?: number) => {
   return Number.isFinite(value) ? value : undefined;
 };
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 const getOrCreateRecord = async (userId: string) => {
   let record = await PaddyRecord.findOne({ clerkId: userId });
   if (!record) {
@@ -147,9 +150,12 @@ export async function addNewField(
       success: true,
       field: JSON.parse(JSON.stringify(savedField)) as IField,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error adding new field:", error);
-    return { success: false, error: error?.message || "Failed to add field" };
+    return {
+      success: false,
+      error: getErrorMessage(error, "Failed to add field"),
+    };
   }
 }
 
@@ -172,11 +178,11 @@ export async function getFields(): Promise<{
       success: true,
       fields: JSON.parse(JSON.stringify(record?.fields ?? [])) as IField[],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching fields:", error);
     return {
       success: false,
-      error: error?.message || "Failed to fetch fields",
+      error: getErrorMessage(error, "Failed to fetch fields"),
     };
   }
 }
@@ -230,11 +236,11 @@ export async function updateField(
         ? (JSON.parse(JSON.stringify(updated)) as IField)
         : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating field:", error);
     return {
       success: false,
-      error: error?.message || "Failed to update field",
+      error: getErrorMessage(error, "Failed to update field"),
     };
   }
 }
@@ -269,11 +275,11 @@ export async function deleteField(
       { $pull: { fields: { _id: objectId } } },
     );
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting field:", error);
     return {
       success: false,
-      error: error?.message || "Failed to delete field",
+      error: getErrorMessage(error, "Failed to delete field"),
     };
   }
 }
@@ -320,11 +326,11 @@ export async function addPlantingRecord(
       success: true,
       record: JSON.parse(JSON.stringify(saved)) as IPlantingRecord,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error adding planting record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to add planting record",
+      error: getErrorMessage(error, "Failed to add planting record"),
     };
   }
 }
@@ -376,11 +382,11 @@ export async function getPlantingRecords(): Promise<{
         JSON.stringify(record.plantings ?? []),
       ) as IPlantingRecord[],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching planting records:", error);
     return {
       success: false,
-      error: error?.message || "Failed to fetch planting records",
+      error: getErrorMessage(error, "Failed to fetch planting records"),
     };
   }
 }
@@ -496,11 +502,11 @@ export async function updatePlantingRecord(
         ? (JSON.parse(JSON.stringify(updated)) as IPlantingRecord)
         : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating planting record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to update planting record",
+      error: getErrorMessage(error, "Failed to update planting record"),
     };
   }
 }
@@ -525,11 +531,11 @@ export async function deletePlantingRecord(
       { $pull: { plantings: { _id: objectId } } },
     );
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting planting record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to delete planting record",
+      error: getErrorMessage(error, "Failed to delete planting record"),
     };
   }
 }
@@ -580,11 +586,11 @@ export async function addFertilizerRecord(
       success: true,
       record: JSON.parse(JSON.stringify(saved)) as IFertilizerRecord,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error adding fertilizer record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to add fertilizer record",
+      error: getErrorMessage(error, "Failed to add fertilizer record"),
     };
   }
 }
@@ -610,11 +616,11 @@ export async function getFertilizerRecords(): Promise<{
         JSON.stringify(record?.fertilizerApplications ?? []),
       ) as IFertilizerRecord[],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching fertilizer records:", error);
     return {
       success: false,
-      error: error?.message || "Failed to fetch fertilizer records",
+      error: getErrorMessage(error, "Failed to fetch fertilizer records"),
     };
   }
 }
@@ -696,11 +702,11 @@ export async function updateFertilizerRecord(
         ? (JSON.parse(JSON.stringify(updated)) as IFertilizerRecord)
         : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating fertilizer record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to update fertilizer record",
+      error: getErrorMessage(error, "Failed to update fertilizer record"),
     };
   }
 }
@@ -725,11 +731,11 @@ export async function deleteFertilizerRecord(
       { $pull: { fertilizerApplications: { _id: objectId } } },
     );
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting fertilizer record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to delete fertilizer record",
+      error: getErrorMessage(error, "Failed to delete fertilizer record"),
     };
   }
 }
@@ -780,11 +786,11 @@ export async function addHarvestRecord(
       success: true,
       record: JSON.parse(JSON.stringify(saved)) as IHarvestRecord,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error adding harvest record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to add harvest record",
+      error: getErrorMessage(error, "Failed to add harvest record"),
     };
   }
 }
@@ -810,11 +816,11 @@ export async function getHarvestRecords(): Promise<{
         JSON.stringify(record?.harvests ?? []),
       ) as IHarvestRecord[],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching harvest records:", error);
     return {
       success: false,
-      error: error?.message || "Failed to fetch harvest records",
+      error: getErrorMessage(error, "Failed to fetch harvest records"),
     };
   }
 }
@@ -914,11 +920,11 @@ export async function updateHarvestRecord(
         ? (JSON.parse(JSON.stringify(updated)) as IHarvestRecord)
         : undefined,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating harvest record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to update harvest record",
+      error: getErrorMessage(error, "Failed to update harvest record"),
     };
   }
 }
@@ -943,11 +949,11 @@ export async function deleteHarvestRecord(
       { $pull: { harvests: { _id: objectId } } },
     );
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting harvest record:", error);
     return {
       success: false,
-      error: error?.message || "Failed to delete harvest record",
+      error: getErrorMessage(error, "Failed to delete harvest record"),
     };
   }
 }

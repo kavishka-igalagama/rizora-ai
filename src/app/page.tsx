@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -251,10 +252,12 @@ const HomePage = async () => {
             >
               <div className="absolute -inset-4 bg-linear-to-r from-primary/20 via-accent/20 to-primary/20 blur-3xl animate-pulse-slow" />
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-                <img
-                  src={heroImage.src}
+                <Image
+                  src={heroImage}
                   alt="AI-powered rice farming technology"
                   className="w-full h-auto object-cover"
+                  priority
+                  sizes="(min-width: 1024px) 50vw, 100vw"
                 />
                 {/* Floating card */}
                 <div className="absolute bottom-6 left-6 right-6 glass rounded-2xl p-4 shadow-xl">
@@ -315,10 +318,12 @@ const HomePage = async () => {
                   )}
                   {feature.image ? (
                     <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-                      <img
-                        src={feature.image.src}
+                      <Image
+                        src={feature.image}
                         alt={feature.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="64px"
+                        className="object-cover"
                       />
                     </div>
                   ) : (
@@ -494,7 +499,7 @@ const HomePage = async () => {
                     ))}
                   </div>
                   <p className="text-foreground leading-relaxed italic">
-                    "{testimonial.quote}"
+                    &ldquo;{testimonial.quote}&rdquo;
                   </p>
                   <div>
                     <p className="font-semibold text-foreground">
@@ -522,7 +527,7 @@ const HomePage = async () => {
               </h2>
               <p className="text-lg text-white/80 max-w-2xl mx-auto">
                 Join Rizora AI today and experience the future of agriculture.
-                Start for free, upgrade when you're ready.
+                Start for free, upgrade when you&apos;re ready.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 <SignUpButton mode="modal">
