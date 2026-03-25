@@ -134,7 +134,7 @@ const Notifications = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <main className="flex-1 ml-64 p-6">
+      <main className="flex-1 p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
