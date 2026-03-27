@@ -7,13 +7,19 @@ Disease detection now uses a separate FastAPI service.
 1. Install ML dependencies:
 
 ```bash
-pip install -r src/ml-service/requirements-fastapi.txt
+pip install -r src/ml-service/requirements.txt
 ```
 
 2. Start the FastAPI server:
 
 ```bash
 uvicorn fastapi_app:app --app-dir src/ml-service --host 127.0.0.1 --port 8000 --reload
+```
+
+Or run both FastAPI and Next.js together from the project root:
+
+```bash
+npm run dev:all
 ```
 
 3. Optional: set a custom ML service URL for Next.js:
@@ -30,6 +36,7 @@ First, run the development server:
 
 ```bash
 npm run dev
+npm run dev:all
 # or
 yarn dev
 # or
