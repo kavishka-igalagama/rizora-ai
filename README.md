@@ -1,11 +1,42 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## ML Service (FastAPI)
+
+Disease detection now uses a separate FastAPI service.
+
+1. Install ML dependencies:
+
+```bash
+pip install -r src/ml-service/requirements.txt
+```
+
+2. Start the FastAPI server:
+
+```bash
+uvicorn fastapi_app:app --app-dir src/ml-service --host 127.0.0.1 --port 8000 --reload
+```
+
+Or run both FastAPI and Next.js together from the project root:
+
+```bash
+npm run dev:all
+```
+
+3. Optional: set a custom ML service URL for Next.js:
+
+```bash
+ML_SERVICE_URL=http://127.0.0.1:8000
+```
+
+The Next.js API route at `src/app/api/disease-detect/route.ts` will call `${ML_SERVICE_URL}/predict`.
+
 ## Getting Started
 
 First, run the development server:
 
 ```bash
 npm run dev
+npm run dev:all
 # or
 yarn dev
 # or

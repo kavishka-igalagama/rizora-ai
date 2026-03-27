@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { UserButton, useClerk } from "@clerk/nextjs";
+import { UserButton, useClerk, useUser } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import {
   BarChart3,
   Bell,
@@ -21,6 +22,8 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { Badge } from "@/components/ui/badge";
+import { getPusherClient } from "@/lib/pusher-client";
 
 interface DashboardNavProps {
   role: "farmer" | "mill" | "officer";
@@ -36,6 +39,11 @@ type NavLink = {
   divider?: boolean;
 };
 
+type ChatMessageEvent = {
+  senderId?: string;
+  recipientId?: string;
+};
+
 export default function DashboardNav({
   role,
   userName,
@@ -44,6 +52,111 @@ export default function DashboardNav({
 }: DashboardNavProps) {
   const pathname = usePathname();
   const { signOut } = useClerk();
+  const { user, isLoaded } = useUser();
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  const canUseChat = role === "farmer" || role === "mill";
+
+  const fetchChatUnreadCount = useCallback(async () => {
+    if (!canUseChat || !user?.id) {
+      setChatUnreadCount(0);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/chat/contacts", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch chat unread count");
+      }
+
+      const data = (await response.json()) as {
+        contacts?: Array<{ unreadCount?: number }>;
+      };
+
+      const total = (data.contacts || []).reduce(
+        (sum, contact) => sum + (contact.unreadCount || 0),
+        0,
+      );
+
+      setChatUnreadCount(total);
+    } catch (error) {
+      console.error("Failed to fetch sidebar chat unread count", error);
+    }
+  }, [canUseChat, user?.id]);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    void fetchChatUnreadCount();
+  }, [fetchChatUnreadCount, isLoaded]);
+
+  useEffect(() => {
+    if (!pathname.startsWith("/dashboard/chat")) {
+      return;
+    }
+
+    // Keep sidebar badge in sync after opening/reading conversations.
+    void fetchChatUnreadCount();
+  }, [fetchChatUnreadCount, pathname]);
+
+  useEffect(() => {
+    if (!canUseChat || !user?.id) {
+      return;
+    }
+
+    const pusher = getPusherClient();
+    const channelName = `private-user-${user.id}`;
+    const channel = pusher.subscribe(channelName);
+
+    const refreshUnreadCount = () => {
+      void fetchChatUnreadCount();
+    };
+
+    const handleNewMessage = (payload: ChatMessageEvent) => {
+      if (payload.recipientId === user.id) {
+        setChatUnreadCount((prev) => prev + 1);
+      }
+
+      // Keep count authoritative in case optimistic update diverges.
+      setTimeout(() => {
+        void fetchChatUnreadCount();
+      }, 250);
+    };
+
+    channel.bind("new-message", handleNewMessage);
+    channel.bind("messages-read", refreshUnreadCount);
+
+    return () => {
+      channel.unbind("new-message", handleNewMessage);
+      channel.unbind("messages-read", refreshUnreadCount);
+      pusher.unsubscribe(channelName);
+    };
+  }, [canUseChat, fetchChatUnreadCount, user?.id]);
+
+  useEffect(() => {
+    const handleUnreadCountChanged = (event: Event) => {
+      const customEvent = event as CustomEvent<{ total?: number }>;
+      setChatUnreadCount(customEvent.detail?.total || 0);
+    };
+
+    window.addEventListener(
+      "chat-unread-count-changed",
+      handleUnreadCountChanged,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "chat-unread-count-changed",
+        handleUnreadCountChanged,
+      );
+    };
+  }, []);
 
   const farmerLinks: NavLink[] = [
     {
@@ -156,6 +269,14 @@ export default function DashboardNav({
           ? officerLinks
           : [];
 
+  const getUnreadForLink = (href: string) => {
+    if (href === "/dashboard/chat") {
+      return chatUnreadCount;
+    }
+
+    return 0;
+  };
+
   const handleLinkClick = () => {
     if (onCloseMobile) {
       onCloseMobile();
@@ -216,6 +337,7 @@ export default function DashboardNav({
         </div>
         {links.map((link) => {
           const isActive = pathname === link.href;
+          const unreadCount = getUnreadForLink(link.href);
           return (
             <div key={link.href}>
               {link.divider && (
@@ -231,7 +353,20 @@ export default function DashboardNav({
                 }`}
               >
                 <span className="shrink-0">{link.icon}</span>
-                <span className="font-medium text-sm">{link.label}</span>
+                <span className="font-medium text-sm flex-1 truncate">
+                  {link.label}
+                </span>
+                {Boolean(unreadCount) && (
+                  <Badge
+                    className={`h-5 min-w-5 rounded-full px-1.5 text-[11px] ${
+                      isActive
+                        ? "bg-primary-foreground text-primary"
+                        : "bg-primary text-primary-foreground"
+                    }`}
+                  >
+                    {unreadCount}
+                  </Badge>
+                )}
               </Link>
             </div>
           );
@@ -242,6 +377,7 @@ export default function DashboardNav({
       <div className="px-3 py-3 border-t border-gray-100 space-y-3">
         {commonLinks.map((link) => {
           const isActive = pathname === link.href;
+          const unreadCount = getUnreadForLink(link.href);
           return (
             <div key={link.href}>
               {link.divider && (
@@ -257,7 +393,20 @@ export default function DashboardNav({
                 }`}
               >
                 <span className="shrink-0">{link.icon}</span>
-                <span className="font-medium text-sm">{link.label}</span>
+                <span className="font-medium text-sm flex-1 truncate">
+                  {link.label}
+                </span>
+                {Boolean(unreadCount) && (
+                  <Badge
+                    className={`h-5 min-w-5 rounded-full px-1.5 text-[11px] ${
+                      isActive
+                        ? "bg-primary-foreground text-primary"
+                        : "bg-primary text-primary-foreground"
+                    }`}
+                  >
+                    {unreadCount}
+                  </Badge>
+                )}
               </Link>
             </div>
           );

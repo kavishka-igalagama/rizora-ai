@@ -601,7 +601,7 @@ const PriceManagementPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <main className="flex-1 ml-65 p-8 transition-all duration-300">
+      <main className="flex-1 p-8 transition-all duration-300">
         {/* Header */}
         <div className="mb-8 animate-fade-in flex items-center justify-between">
           <div>
