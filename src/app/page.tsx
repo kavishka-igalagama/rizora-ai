@@ -40,7 +40,7 @@ const HomePage = async () => {
       icon: Microscope,
       title: "AI Disease Detection",
       description:
-        "Upload rice leaf images and get instant disease diagnosis with 95%+ accuracy using advanced deep learning.",
+        "Upload rice leaf images and get instant disease diagnosis with 99% accuracy using advanced deep learning.",
       image: diseaseIcon,
       color: "from-emerald-500 to-teal-600",
       badge: "Most Popular",
@@ -71,7 +71,7 @@ const HomePage = async () => {
   ];
 
   const stats = [
-    { value: "95%", label: "Detection Accuracy", icon: Zap },
+    { value: "99%", label: "Detection Accuracy", icon: Zap },
     { value: "5,000+", label: "Active Farmers", icon: Users },
     { value: "30%", label: "Crop Loss Reduction", icon: Shield },
     { value: "24/7", label: "Expert Support", icon: BarChart3 },
@@ -239,7 +239,7 @@ const HomePage = async () => {
                     <span className="font-semibold text-foreground">
                       5,000+
                     </span>{" "}
-                    farmers trust Rizora AI
+                    farmers trust Rizora
                   </p>
                 </div>
               </div>
@@ -360,7 +360,7 @@ const HomePage = async () => {
                   Why Choose Us
                 </Badge>
                 <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-foreground">
-                  Why Choose Rizora AI?
+                  Why Choose Rizora?
                 </h2>
                 <p className="text-lg text-muted-foreground">
                   Join thousands of farmers who have increased their yield and

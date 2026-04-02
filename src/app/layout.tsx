@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rizora AI - AI-Powered Rice Disease Detection System",
+  title: "Rizora - AI-Powered Rice Disease Detection System",
   description:
     "AI-Powered Rice Disease Detection and Treatment System for Smart Paddy Cultivation in Sri Lanka",
 };

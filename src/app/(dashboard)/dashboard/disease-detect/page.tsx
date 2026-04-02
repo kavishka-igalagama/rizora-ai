@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
   Bug,
+  CheckCircle2,
   Droplets,
   Leaf,
   Upload,
@@ -146,6 +147,25 @@ const DiseaseDetection = () => {
   const [detectionResult, setDetectionResult] =
     useState<DetectionResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const isHealthyDetection = (disease: string) =>
+    disease.toLowerCase().includes("healthy");
+
+  const getDetectionBadgeLabel = (disease: string) =>
+    isHealthyDetection(disease) ? "Healthy" : "Detected";
+
+  const getDetectionBadgeClass = (disease: string) =>
+    isHealthyDetection(disease)
+      ? "bg-primary text-white"
+      : "bg-amber-600 text-white";
+
+  const getTreatmentSectionTitle = (disease: string) =>
+    isHealthyDetection(disease) ? "Healthy Plant Care Tips" : "Treatment Plan";
+
+  const getTreatmentSectionDescription = (disease: string) =>
+    isHealthyDetection(disease)
+      ? "Keep your plant healthy with these practical next steps."
+      : "Follow these suggestions to reduce disease spread and recover plant health.";
 
   const preprocessImage = async (file: File) => {
     const dataUrl = await readFileAsDataUrl(file);
@@ -458,22 +478,47 @@ const DiseaseDetection = () => {
               <CardContent className="space-y-4">
                 <div className="p-5 rounded-xl bg-linear-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
                   <div className="flex items-center gap-3">
-                    <Badge className="bg-amber-600 text-white">Detected</Badge>
+                    <Badge
+                      className={getDetectionBadgeClass(
+                        detectionResult.disease,
+                      )}
+                    >
+                      {getDetectionBadgeLabel(detectionResult.disease)}
+                    </Badge>
                     <h3 className="text-2xl font-bold text-foreground">
                       {detectionResult.disease}
                     </h3>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border p-4">
-                  <h4 className="font-semibold text-foreground mb-2">
-                    Treatment Suggestions
-                  </h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                    {detectionResult.treatmentSuggestions.map((suggestion) => (
-                      <li key={suggestion}>{suggestion}</li>
-                    ))}
-                  </ul>
+                <div className="rounded-xl border border-border bg-muted/20 p-4 md:p-5">
+                  <div className="mb-4">
+                    <h4 className="font-semibold text-foreground">
+                      {getTreatmentSectionTitle(detectionResult.disease)}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {getTreatmentSectionDescription(detectionResult.disease)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {detectionResult.treatmentSuggestions.map(
+                      (suggestion, index) => (
+                        <div
+                          key={suggestion}
+                          className="flex items-start gap-3 rounded-lg border border-border/70 bg-background/80 p-3"
+                        >
+                          <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                            {index + 1}
+                          </div>
+                          <p className="flex-1 text-sm text-foreground leading-relaxed">
+                            {suggestion}
+                          </p>
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                        </div>
+                      ),
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

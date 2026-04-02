@@ -8,36 +8,59 @@ const ML_SERVICE_URL =
 
 const TREATMENT_BY_DISEASE: Record<string, string[]> = {
   "Healthy Rice Leaves": [
-    "No treatment required. Continue regular monitoring.",
-    "Maintain balanced fertilization and field sanitation.",
+    "No treatment required. Continue regular field monitoring.",
+    "Maintain proper irrigation, balanced fertilization, and weed control.",
+    "Follow good agricultural practices (GAP) to prevent disease occurrence.",
   ],
+
   "Rice Bacterial Blight": [
-    "Remove heavily infected leaves and improve field drainage.",
-    "Apply recommended copper-based bactericide with local agricultural guidance.",
+    "Remove and destroy severely infected plants to reduce spread.",
+    "Avoid excessive nitrogen fertilizer; apply balanced NPK.",
+    "Improve field drainage and avoid stagnant water.",
+    "Apply copper-based bactericide only if recommended by an agricultural officer.",
   ],
+
   "Rice Brown Spots": [
-    "Apply a suitable fungicide (e.g., tricyclazole or mancozeb) as advised locally.",
-    "Avoid nutrient stress and ensure balanced potassium application.",
+    "Apply fungicides such as mancozeb or tricyclazole as per local recommendations.",
+    "Improve soil fertility with adequate potassium and organic matter.",
+    "Avoid drought stress and ensure proper water management.",
+    "Use certified disease-free seeds.",
   ],
+
   "Rice Leaf Blast": [
-    "Use blast-recommended fungicide early in infection.",
-    "Avoid excessive nitrogen and maintain proper plant spacing.",
+    "Apply blast-specific fungicides (e.g., tricyclazole) at early stages.",
+    "Avoid excessive nitrogen fertilizer application.",
+    "Maintain proper plant spacing to reduce humidity.",
+    "Use resistant rice varieties when available.",
   ],
-  "Rice Leaf Scaled": [
-    "Remove infected debris and improve airflow in the field.",
-    "Use recommended fungicide treatment under extension officer advice.",
+
+  "Rice Leaf Scald": [
+    "Remove infected plant debris after harvesting.",
+    "Ensure good field aeration and avoid overcrowding.",
+    "Apply recommended fungicides if disease severity increases.",
+    "Practice crop rotation if possible.",
   ],
+
   "Rice Leaf Smut": [
-    "Treat seeds with approved fungicide before sowing.",
-    "Apply preventive fungicide if symptoms spread rapidly.",
+    "Treat seeds with recommended fungicide before planting.",
+    "Use certified and clean seeds.",
+    "Avoid late planting and maintain proper field hygiene.",
+    "Apply preventive fungicide if infection risk is high.",
   ],
+
   "Rice Sheath Blight": [
-    "Reduce dense canopy and excess nitrogen fertilization.",
-    "Apply sheath blight-targeted fungicide as per local recommendation.",
+    "Reduce plant density and avoid excess nitrogen fertilizer.",
+    "Maintain proper water levels and avoid prolonged flooding.",
+    "Apply sheath blight fungicides (e.g., validamycin) when symptoms appear.",
+    "Remove infected plant residues after harvest.",
   ],
+
   "Rice Tungro": [
-    "Control vector insects and remove infected plants early.",
-    "Use resistant varieties and synchronize planting where possible.",
+    "Control insect vectors (especially green leafhoppers) using recommended insecticides.",
+    "Remove and destroy infected plants early.",
+    "Use tungro-resistant rice varieties.",
+    "Synchronize planting within the area to reduce spread.",
+    "Avoid staggered planting which increases vector population.",
   ],
 };
 

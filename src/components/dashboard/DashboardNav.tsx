@@ -296,7 +296,7 @@ export default function DashboardNav({
           </div>
           <div className="flex flex-col overflow-hidden">
             <span className="font-display font-bold text-lg text-foreground truncate">
-              Rizora AI
+              Rizora
             </span>
             <span className="text-xs text-muted-foreground truncate">
               Smart Farming
