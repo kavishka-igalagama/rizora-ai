@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type DragEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type DragEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,19 +12,51 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Bug,
+  CalendarDays,
   CheckCircle2,
+  Clock3,
   Droplets,
   Leaf,
+  RefreshCcw,
   Upload,
   Camera,
   AlertCircle,
   Info,
   Loader2,
   Microscope,
+  Eye,
   Sparkles,
+  Trash2,
   Zap,
+  History,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
@@ -33,6 +65,15 @@ interface DetectionResult {
   disease: string;
   confidence: number;
   treatmentSuggestions: string[];
+}
+
+interface ScanHistoryItem {
+  _id: string;
+  disease: string;
+  confidence: number;
+  treatmentSuggestions: string[];
+  imageUrl: string;
+  createdAt: string;
 }
 
 interface CommonDisease {
@@ -147,6 +188,50 @@ const DiseaseDetection = () => {
   const [detectionResult, setDetectionResult] =
     useState<DetectionResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [selectedHistoryItem, setSelectedHistoryItem] =
+    useState<ScanHistoryItem | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [scanToDeleteId, setScanToDeleteId] = useState<string | null>(null);
+  const [isDeletingScan, setIsDeletingScan] = useState(false);
+
+  const loadScanHistory = async () => {
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const response = await fetch("/api/disease-detect", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = (await response.json()) as
+        | { history: ScanHistoryItem[] }
+        | { error?: string };
+
+      if (!response.ok || !("history" in data)) {
+        const apiError = "error" in data ? data.error : undefined;
+        throw new Error(apiError || "Failed to fetch scan history.");
+      }
+
+      setScanHistory(data.history);
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch scan history.",
+      );
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadScanHistory();
+  }, []);
 
   const isHealthyDetection = (disease: string) =>
     disease.toLowerCase().includes("healthy");
@@ -283,6 +368,7 @@ const DiseaseDetection = () => {
         confidence: data.confidence,
         treatmentSuggestions: data.treatmentSuggestions,
       });
+      void loadScanHistory();
     } catch (error) {
       setDetectionResult(null);
       setErrorMessage(
@@ -293,6 +379,54 @@ const DiseaseDetection = () => {
       setAnalysisProgress(100);
       setIsAnalyzing(false);
     }
+  };
+
+  const handleDeleteScan = async (scanId: string) => {
+    setIsDeletingScan(true);
+
+    try {
+      const response = await fetch(
+        `/api/disease-detect?scanId=${encodeURIComponent(scanId)}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = (await response.json()) as
+        | { success: boolean }
+        | { error?: string };
+
+      if (!response.ok || !("success" in data && data.success)) {
+        const apiError = "error" in data ? data.error : undefined;
+        throw new Error(apiError || "Failed to delete scan.");
+      }
+
+      setScanHistory((prev) => prev.filter((item) => item._id !== scanId));
+
+      setSelectedHistoryItem((prev) => {
+        if (!prev || prev._id !== scanId) {
+          return prev;
+        }
+        setIsViewDialogOpen(false);
+        return null;
+      });
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error ? error.message : "Failed to delete scan.",
+      );
+    } finally {
+      setIsDeletingScan(false);
+    }
+  };
+
+  const handleConfirmDeleteScan = async () => {
+    if (!scanToDeleteId) {
+      return;
+    }
+
+    await handleDeleteScan(scanToDeleteId);
+    setIsDeleteDialogOpen(false);
+    setScanToDeleteId(null);
   };
 
   return (
@@ -327,246 +461,543 @@ const DiseaseDetection = () => {
           </AlertDescription>
         </Alert>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Upload Section */}
-          <Card className="border-border shadow-lg">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <Upload className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle>Upload Leaf Image</CardTitle>
-                  <CardDescription>
-                    Take a photo or upload an existing image
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div
-                className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-all hover:bg-primary/5 cursor-pointer"
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              >
-                {uploadedImage ? (
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <Image
-                        src={uploadedImage}
-                        alt="Uploaded leaf"
-                        width={1200}
-                        height={800}
-                        unoptimized
-                        className="w-full h-64 object-cover rounded-lg shadow-md"
-                      />
-                      {isAnalyzing && (
-                        <div className="absolute inset-0 rounded-lg bg-background/65 backdrop-blur-xs p-4 flex flex-col justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center animate-pulse">
-                              <Sparkles className="h-5 w-5 text-primary" />
-                            </div>
-                            <div className="text-left">
-                              <p className="text-sm font-semibold text-foreground">
-                                AI is analyzing...
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                CNN model is processing your leaf image
-                              </p>
-                            </div>
-                          </div>
+        <Tabs defaultValue="scan" className="space-y-6">
+          <TabsList className="h-11 w-full max-w-md grid grid-cols-2 p-1">
+            <TabsTrigger value="scan" className="gap-2">
+              <Microscope className="h-4 w-4" />
+              Scan Disease
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <Clock3 className="h-4 w-4" />
+              Scan History
+            </TabsTrigger>
+          </TabsList>
 
-                          <div className="space-y-2">
-                            <Progress
-                              value={Math.min(analysisProgress, 100)}
-                              className="h-2"
-                            />
-                            <div className="flex justify-between text-xs text-foreground/90">
-                              <span>Processing image...</span>
-                              <span>
-                                {Math.min(Math.round(analysisProgress), 100)}%
-                              </span>
+          <TabsContent value="scan">
+            <div className="grid lg:grid-cols-2 gap-8">
+              <Card className="border-border shadow-lg">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle>Upload Leaf Image</CardTitle>
+                      <CardDescription>
+                        Take a photo or upload an existing image
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div
+                    className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-all hover:bg-primary/5 cursor-pointer"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  >
+                    {uploadedImage ? (
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <Image
+                            src={uploadedImage}
+                            alt="Uploaded leaf"
+                            width={1200}
+                            height={800}
+                            unoptimized
+                            className="w-full h-64 object-cover rounded-lg shadow-md"
+                          />
+                          {isAnalyzing && (
+                            <div className="absolute inset-0 rounded-lg bg-background/65 backdrop-blur-xs p-4 flex flex-col justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center animate-pulse">
+                                  <Sparkles className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="text-left">
+                                  <p className="text-sm font-semibold text-foreground">
+                                    AI is analyzing...
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    CNN model is processing your leaf image
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Progress
+                                  value={Math.min(analysisProgress, 100)}
+                                  className="h-2"
+                                />
+                                <div className="flex justify-between text-xs text-foreground/90">
+                                  <span>Processing image...</span>
+                                  <span>
+                                    {Math.min(
+                                      Math.round(analysisProgress),
+                                      100,
+                                    )}
+                                    %
+                                  </span>
+                                </div>
+                              </div>
                             </div>
+                          )}
+                        </div>
+                        <label htmlFor="file-upload">
+                          <Button
+                            variant="outline"
+                            className="w-full cursor-pointer"
+                            asChild
+                          >
+                            <span>
+                              <Camera className="w-4 h-4 mr-2" />
+                              Change Image
+                            </span>
+                          </Button>
+                        </label>
+                      </div>
+                    ) : (
+                      <label
+                        htmlFor="file-upload"
+                        className="cursor-pointer block"
+                      >
+                        <div className="space-y-4">
+                          <div className="w-20 h-20 mx-auto rounded-full bg-linear-to-br from-primary/20 to-emerald-500/20 flex items-center justify-center">
+                            <Camera className="w-10 h-10 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground mb-1">
+                              Click to upload or drag and drop
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              PNG, JPG or JPEG (max. 10MB)
+                            </p>
                           </div>
                         </div>
-                      )}
-                    </div>
-                    <label htmlFor="file-upload">
-                      <Button
-                        variant="outline"
-                        className="w-full cursor-pointer"
-                        asChild
-                      >
-                        <span>
-                          <Camera className="w-4 h-4 mr-2" />
-                          Change Image
-                        </span>
-                      </Button>
-                    </label>
+                      </label>
+                    )}
+                    <input
+                      id="file-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
                   </div>
-                ) : (
-                  <label htmlFor="file-upload" className="cursor-pointer block">
-                    <div className="space-y-4">
-                      <div className="w-20 h-20 mx-auto rounded-full bg-linear-to-br from-primary/20 to-emerald-500/20 flex items-center justify-center">
-                        <Camera className="w-10 h-10 text-primary" />
+
+                  {uploadedImage && !detectionResult && (
+                    <Button
+                      className="w-full h-12 text-base bg-linear-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 cursor-pointer"
+                      onClick={handleAnalyze}
+                      disabled={isAnalyzing}
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Analyzing with CNN Model...
+                        </>
+                      ) : (
+                        <>
+                          <Microscope className="w-5 h-5 mr-2" />
+                          Analyze Image
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {errorMessage && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{errorMessage}</AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+
+              {detectionResult ? (
+                <Card className="border-border shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-linear-to-br from-amber-500 to-orange-600">
+                        <AlertCircle className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-semibold text-foreground mb-1">
-                          Click to upload or drag and drop
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          PNG, JPG or JPEG (max. 10MB)
-                        </p>
+                        <CardTitle>Detection Result</CardTitle>
+                        <CardDescription>
+                          Result Confidence:{" "}
+                          {detectionResult.confidence.toFixed(2)}%
+                        </CardDescription>
                       </div>
                     </div>
-                  </label>
-                )}
-                <input
-                  id="file-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-
-              {uploadedImage && !detectionResult && (
-                <Button
-                  className="w-full h-12 text-base bg-linear-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 cursor-pointer"
-                  onClick={handleAnalyze}
-                  disabled={isAnalyzing}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Analyzing with CNN Model...
-                    </>
-                  ) : (
-                    <>
-                      <Microscope className="w-5 h-5 mr-2" />
-                      Analyze Image
-                    </>
-                  )}
-                </Button>
-              )}
-
-              {errorMessage && (
-                <Alert variant="destructive">
-                  <AlertDescription>{errorMessage}</AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Results Section */}
-          {detectionResult ? (
-            <Card className="border-border shadow-lg">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-linear-to-br from-amber-500 to-orange-600">
-                    <AlertCircle className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle>Detection Result</CardTitle>
-                    <CardDescription>
-                      Result Confidence: {detectionResult.confidence.toFixed(2)}
-                      %
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-5 rounded-xl bg-linear-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      className={getDetectionBadgeClass(
-                        detectionResult.disease,
-                      )}
-                    >
-                      {getDetectionBadgeLabel(detectionResult.disease)}
-                    </Badge>
-                    <h3 className="text-2xl font-bold text-foreground">
-                      {detectionResult.disease}
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-border bg-muted/20 p-4 md:p-5">
-                  <div className="mb-4">
-                    <h4 className="font-semibold text-foreground">
-                      {getTreatmentSectionTitle(detectionResult.disease)}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {getTreatmentSectionDescription(detectionResult.disease)}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    {detectionResult.treatmentSuggestions.map(
-                      (suggestion, index) => (
-                        <div
-                          key={suggestion}
-                          className="flex items-start gap-3 rounded-lg border border-border/70 bg-background/80 p-3"
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-5 rounded-xl bg-linear-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          className={getDetectionBadgeClass(
+                            detectionResult.disease,
+                          )}
                         >
-                          <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-                            {index + 1}
+                          {getDetectionBadgeLabel(detectionResult.disease)}
+                        </Badge>
+                        <h3 className="text-2xl font-bold text-foreground">
+                          {detectionResult.disease}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-muted/20 p-4 md:p-5">
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-foreground">
+                          {getTreatmentSectionTitle(detectionResult.disease)}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {getTreatmentSectionDescription(
+                            detectionResult.disease,
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {detectionResult.treatmentSuggestions.map(
+                          (suggestion, index) => (
+                            <div
+                              key={suggestion}
+                              className="flex items-start gap-3 rounded-lg border border-border/70 bg-background/80 p-3"
+                            >
+                              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                                {index + 1}
+                              </div>
+                              <p className="flex-1 text-sm text-foreground leading-relaxed">
+                                {suggestion}
+                              </p>
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-border shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Common Rice Diseases</CardTitle>
+                    <CardDescription>
+                      Diseases currently recognized by the model.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {COMMON_RICE_DISEASES.map((disease) => (
+                        <div
+                          key={disease.name}
+                          className="rounded-xl border border-border bg-muted/40 p-3"
+                        >
+                          <div className="mb-2 flex items-start gap-2">
+                            <div
+                              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-linear-to-br ${disease.iconColorClass}`}
+                            >
+                              <disease.icon className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex items-center justify-between gap-2">
+                                <h4 className="text-sm font-semibold text-foreground leading-tight">
+                                  {disease.name}
+                                </h4>
+                                <Badge
+                                  variant="outline"
+                                  className="text-2xs px-2 py-0"
+                                >
+                                  {disease.type}
+                                </Badge>
+                              </div>
+                            </div>
                           </div>
-                          <p className="flex-1 text-sm text-foreground leading-relaxed">
-                            {suggestion}
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {disease.description}
                           </p>
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
                         </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history">
             <Card className="border-border shadow-lg">
               <CardHeader>
-                <CardTitle>Common Rice Diseases</CardTitle>
-                <CardDescription>
-                  Diseases currently recognized by the model.
-                </CardDescription>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                      <History className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle>Previous Scan History</CardTitle>
+                      <CardDescription>
+                        {scanHistory.length} records found
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void loadScanHistory()}
+                      disabled={isHistoryLoading}
+                    >
+                      <RefreshCcw className="mr-2 h-4 w-4" />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {COMMON_RICE_DISEASES.map((disease) => (
-                    <div
-                      key={disease.name}
-                      className="rounded-xl border border-border bg-muted/40 p-3"
-                    >
-                      <div className="mb-2 flex items-start gap-2">
-                        <div
-                          className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-linear-to-br ${disease.iconColorClass}`}
-                        >
-                          <disease.icon className="h-4 w-4 text-white" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex items-center justify-between gap-2">
-                            <h4 className="text-sm font-semibold text-foreground leading-tight">
-                              {disease.name}
-                            </h4>
-                            <Badge
-                              variant="outline"
-                              className="text-2xs px-2 py-0"
-                            >
-                              {disease.type}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {disease.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {isHistoryLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Loading scan history...
+                  </div>
+                ) : historyError ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{historyError}</AlertDescription>
+                  </Alert>
+                ) : scanHistory.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                    No scan history yet. Start by scanning your first leaf
+                    image.
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40">
+                          <TableHead className="w-30">Scan ID</TableHead>
+                          <TableHead>Date & Time</TableHead>
+                          <TableHead>Disease</TableHead>
+                          <TableHead className="w-55">Confidence</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {scanHistory.map((scan) => (
+                          <TableRow
+                            key={scan._id}
+                            className="hover:bg-muted/25"
+                          >
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              #{scan._id.slice(-6).toUpperCase()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="inline-flex items-start gap-2">
+                                <div className="leading-tight">
+                                  <span className="block text-sm text-foreground">
+                                    {new Date(
+                                      scan.createdAt,
+                                    ).toLocaleDateString()}
+                                  </span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    {new Date(
+                                      scan.createdAt,
+                                    ).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  className={getDetectionBadgeClass(
+                                    scan.disease,
+                                  )}
+                                >
+                                  {getDetectionBadgeLabel(scan.disease)}
+                                </Badge>
+                                <span className="font-medium text-foreground">
+                                  {scan.disease}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Progress
+                                  value={Math.min(scan.confidence, 100)}
+                                  className="h-2 w-28"
+                                />
+                                <span className="text-sm font-semibold text-foreground">
+                                  {scan.confidence.toFixed(2)}%
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedHistoryItem(scan);
+                                    setIsViewDialogOpen(true);
+                                  }}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setScanToDeleteId(scan._id);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                  aria-label="Delete scan"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
+
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="sm:max-w-3xl">
+            {selectedHistoryItem && (
+              <>
+                <DialogHeader className="border-b border-border pb-4">
+                  <DialogTitle className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Eye className="h-4 w-4" />
+                    </span>
+                    <span>Scan Details</span>
+                    <Badge variant="outline" className="font-mono">
+                      #{selectedHistoryItem._id.slice(-6).toUpperCase()}
+                    </Badge>
+                  </DialogTitle>
+                  <DialogDescription>
+                    <span className="block text-sm text-foreground">
+                      {new Date(
+                        selectedHistoryItem.createdAt,
+                      ).toLocaleDateString()}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {new Date(
+                        selectedHistoryItem.createdAt,
+                      ).toLocaleTimeString()}
+                    </span>
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 md:grid-cols-[1.15fr_1fr]">
+                  <div className="relative min-h-72 overflow-hidden rounded-xl border border-border bg-muted/20">
+                    <Image
+                      src={selectedHistoryItem.imageUrl}
+                      alt={selectedHistoryItem.disease}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-border bg-muted/20 p-4">
+                      <p className="mb-1 text-xs text-muted-foreground">
+                        Disease
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          className={getDetectionBadgeClass(
+                            selectedHistoryItem.disease,
+                          )}
+                        >
+                          {getDetectionBadgeLabel(selectedHistoryItem.disease)}
+                        </Badge>
+                        <p className="font-semibold text-foreground">
+                          {selectedHistoryItem.disease}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-muted/20 p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          Confidence
+                        </p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {selectedHistoryItem.confidence.toFixed(2)}%
+                        </p>
+                      </div>
+                      <Progress
+                        value={Math.min(selectedHistoryItem.confidence, 100)}
+                        className="h-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Treatment Suggestions
+                  </p>
+                  <div className="space-y-2.5">
+                    {(selectedHistoryItem.treatmentSuggestions.length > 0
+                      ? selectedHistoryItem.treatmentSuggestions
+                      : ["No treatment suggestions available."]
+                    ).map((suggestion, index) => (
+                      <div
+                        key={`${selectedHistoryItem._id}-${index}`}
+                        className="flex items-start gap-3 rounded-lg border border-border/70 bg-background/80 p-3"
+                      >
+                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                          {index + 1}
+                        </span>
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {suggestion}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-destructive" />
+                Delete Scan
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this scan? This action cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingScan}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => void handleConfirmDeleteScan()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeletingScan}
+              >
+                {isDeletingScan ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );

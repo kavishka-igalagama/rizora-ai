@@ -1,3 +1,11 @@
+import { auth } from "@clerk/nextjs/server";
+import {
+  deleteImageFromCloudinary,
+  uploadImageToCloudinary,
+} from "@/lib/cloudinary";
+import connectDB from "@/lib/mongodb";
+import DiseaseScan from "@/lib/models/DiseaseScan";
+
 type InferenceResult = {
   disease: string;
   confidence: number;
@@ -66,6 +74,16 @@ const TREATMENT_BY_DISEASE: Record<string, string[]> = {
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
+function normalizeConfidenceToPercent(rawConfidence: number): number {
+  if (!Number.isFinite(rawConfidence) || rawConfidence < 0) {
+    throw new Error("Invalid confidence value from ML service.");
+  }
+
+  // Support both model formats: probability (0-1) and percentage (0-100).
+  const percent = rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence;
+  return Math.min(Math.max(percent, 0), 100);
+}
+
 async function runInference(image: File): Promise<InferenceResult> {
   const body = new FormData();
   body.append("image", image);
@@ -100,11 +118,15 @@ async function runInference(image: File): Promise<InferenceResult> {
     throw new Error("Invalid confidence value from ML service.");
   }
 
-  return { disease: payload.disease, confidence: payload.confidence };
+  return {
+    disease: payload.disease,
+    confidence: normalizeConfidenceToPercent(payload.confidence),
+  };
 }
 
 export async function POST(req: Request) {
   try {
+    const { userId } = await auth();
     const formData = await req.formData();
     const image = formData.get("image");
 
@@ -129,14 +151,31 @@ export async function POST(req: Request) {
       );
     }
 
+    const uploadedImage = await uploadImageToCloudinary(image);
     const result = await runInference(image);
     const treatmentSuggestions = TREATMENT_BY_DISEASE[result.disease] || [
       "Consult your local agricultural extension officer for targeted treatment.",
     ];
 
+    await connectDB();
+    const savedScan = await DiseaseScan.create({
+      clerkId: userId,
+      disease: result.disease,
+      confidence: result.confidence,
+      treatmentSuggestions,
+      imageUrl: uploadedImage.secureUrl,
+      imagePublicId: uploadedImage.publicId,
+      imageFormat: uploadedImage.format,
+      imageBytes: uploadedImage.bytes,
+      imageWidth: uploadedImage.width,
+      imageHeight: uploadedImage.height,
+    });
+
     return Response.json({
       ...result,
       treatmentSuggestions,
+      imageUrl: uploadedImage.secureUrl,
+      scanId: String(savedScan._id),
     });
   } catch (error) {
     console.error("[disease-detect] inference failed", error);
@@ -149,6 +188,87 @@ export async function POST(req: Request) {
     return Response.json(
       {
         error: `Failed to run model inference. ${details}`,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await connectDB();
+
+    const history = await DiseaseScan.find({ clerkId: userId })
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .select("disease confidence treatmentSuggestions imageUrl createdAt")
+      .lean();
+
+    return Response.json({ history });
+  } catch (error) {
+    console.error("[disease-detect] history fetch failed", error);
+
+    return Response.json(
+      {
+        error: "Failed to fetch scan history.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const scanId = searchParams.get("scanId");
+
+    if (!scanId) {
+      return Response.json({ error: "scanId is required." }, { status: 400 });
+    }
+
+    await connectDB();
+
+    const scan = await DiseaseScan.findOne({ _id: scanId, clerkId: userId });
+
+    if (!scan) {
+      return Response.json(
+        { error: "Scan record not found." },
+        { status: 404 },
+      );
+    }
+
+    if (scan.imagePublicId) {
+      try {
+        await deleteImageFromCloudinary(scan.imagePublicId);
+      } catch (cloudinaryError) {
+        console.error(
+          "[disease-detect] cloudinary delete failed",
+          cloudinaryError,
+        );
+      }
+    }
+
+    await DiseaseScan.deleteOne({ _id: scanId, clerkId: userId });
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("[disease-detect] scan delete failed", error);
+
+    return Response.json(
+      {
+        error: "Failed to delete scan.",
       },
       { status: 500 },
     );

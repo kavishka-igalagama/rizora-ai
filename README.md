@@ -30,6 +30,21 @@ ML_SERVICE_URL=http://127.0.0.1:8000
 
 The Next.js API route at `src/app/api/disease-detect/route.ts` will call `${ML_SERVICE_URL}/predict`.
 
+## Required Environment Variables
+
+Disease scan results are now persisted to MongoDB, and uploaded images are stored in Cloudinary.
+
+Set these in `.env.local`:
+
+```bash
+MONGODB_URI=your_mongodb_connection_string
+ML_SERVICE_URL=http://127.0.0.1:8000
+
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
 ## Getting Started
 
 First, run the development server:
