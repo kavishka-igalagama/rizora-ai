@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import FarmerDashboard from "@/components/dashboard/farmer/FarmerDashboard";
-import MillDashboard from "@/components/dashboard/MillDashboard";
+import MillDashboard from "@/components/dashboard/mill/MillDashboard";
 import { getCurrentUserWithRole } from "@/lib/auth";
 import OfficerDashboard from "@/components/dashboard/OfficerDashboard";
 
@@ -16,7 +16,12 @@ const DashboardPage = async () => {
   }
 
   if (user.role === "mill") {
-    return <MillDashboard userName={user.firstName || "User"} />;
+    return (
+      <MillDashboard
+        userName={user.firstName || "User"}
+        millName={user.millName}
+      />
+    );
   }
 
   if (user.role === "officer") {

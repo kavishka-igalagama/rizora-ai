@@ -10,7 +10,9 @@ export async function getCurrentUserDistrict(): Promise<string | null> {
   if (!userId) return null;
   try {
     await connectDB();
-    const user = await User.findOne({ clerkId: userId }).select("district").lean();
+    const user = await User.findOne({ clerkId: userId })
+      .select("district")
+      .lean();
     return user?.district ?? null;
   } catch {
     return null;
@@ -48,6 +50,19 @@ export async function getCurrentUserWithRole() {
   }
 
   const role = await getUserRole();
+  let millName: string | undefined;
+
+  if (role === "mill") {
+    try {
+      await connectDB();
+      const dbUser = await User.findOne({ clerkId: user.id })
+        .select("millName")
+        .lean<{ millName?: string } | null>();
+      millName = dbUser?.millName;
+    } catch {
+      millName = undefined;
+    }
+  }
 
   return {
     id: user.id,
@@ -56,6 +71,7 @@ export async function getCurrentUserWithRole() {
     lastName: user.lastName,
     imageUrl: user.imageUrl,
     role,
+    millName,
   };
 }
 

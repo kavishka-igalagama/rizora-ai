@@ -5,7 +5,6 @@ import { UserButton, useClerk, useUser } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
-  BarChart3,
   Bell,
   BookOpen,
   Calendar,
@@ -17,6 +16,7 @@ import {
   MapIcon,
   MessageSquare,
   Microscope,
+  Package,
   Settings,
   TrendingUp,
   Users,
@@ -193,14 +193,14 @@ export default function DashboardNav({
       icon: <DollarSign className="h-5 w-5" />,
     },
     {
-      href: "/dashboard/collections",
+      href: "/dashboard/paddy-collections",
       label: "Paddy Collections",
       icon: <Calendar className="h-5 w-5" />,
     },
     {
-      href: "/dashboard/reports",
-      label: "Reports & Analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
+      href: "/dashboard/purchase-records",
+      label: "Purchase Records",
+      icon: <Package className="h-5 w-5" />,
     },
   ];
 
