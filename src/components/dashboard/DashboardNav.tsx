@@ -9,17 +9,13 @@ import {
   BookOpen,
   Calendar,
   DollarSign,
-  FileSearch,
   LayoutDashboard,
   Leaf,
-  Library,
-  MapIcon,
   MessageSquare,
   Microscope,
   Package,
   Settings,
   TrendingUp,
-  Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -211,34 +207,9 @@ export default function DashboardNav({
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      label: "Disease Monitoring Map",
-      href: "/dashboard/map",
-      icon: <MapIcon className="h-5 w-5" />,
-    },
-    {
-      label: "Disease Reports",
-      href: "/dashboard/reports",
-      icon: <FileSearch className="h-5 w-5" />,
-    },
-    {
-      label: "Knowledge Base",
-      href: "/dashboard/knowledge",
-      icon: <Library className="h-5 w-5" />,
-    },
-    {
-      label: "Farmer Insights",
-      href: "/dashboard/farmers",
-      icon: <Users className="h-5 w-5" />,
-    },
-    {
-      label: "Market & Production Insights",
-      href: "/dashboard/insights",
-      icon: <TrendingUp className="h-5 w-5" />,
-    },
-    {
-      label: "Communication Hub",
-      href: "/dashboard/messages",
-      icon: <MessageSquare className="h-5 w-5" />,
+      label: "Disease Detection",
+      href: "/dashboard/disease-detect",
+      icon: <Microscope className="h-5 w-5" />,
     },
   ];
 

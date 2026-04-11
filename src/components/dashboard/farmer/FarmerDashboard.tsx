@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { FarmerDashboardData } from "@/lib/actions/farmer/dashboard";
 import {
   Microscope,
   BookOpen,
@@ -25,57 +24,43 @@ import {
 
 interface FarmerDashboardProps {
   userName: string;
+  dashboardData: FarmerDashboardData;
 }
 
-const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
+const formatLkr = (amount: number) =>
+  `LKR ${new Intl.NumberFormat("en-LK", {
+    maximumFractionDigits: 0,
+  }).format(amount)}`;
+
+const FarmerDashboard = ({ userName, dashboardData }: FarmerDashboardProps) => {
   const stats = [
     {
       label: "Total Scans",
-      value: "24",
+      value: dashboardData.stats.totalScans.toString(),
       icon: Microscope,
-      color: "text-primary",
+      iconClass: "text-primary",
+      iconBgClass: "bg-primary/10",
     },
     {
       label: "Healthy Crops",
-      value: "18",
+      value: dashboardData.stats.healthyScans.toString(),
       icon: CheckCircle,
-      color: "text-success",
+      iconClass: "text-success",
+      iconBgClass: "bg-success/15",
     },
     {
       label: "Diseases Detected",
-      value: "6",
+      value: dashboardData.stats.diseaseScans.toString(),
       icon: AlertCircle,
-      color: "text-warning",
+      iconClass: "text-warning",
+      iconBgClass: "bg-warning/15",
     },
     {
       label: "This Month Revenue",
-      value: "LKR 45,000",
+      value: formatLkr(dashboardData.stats.monthRevenue),
       icon: DollarSign,
-      color: "text-accent",
-    },
-  ];
-
-  const recentScans = [
-    {
-      id: 1,
-      date: "2025-11-08",
-      result: "Healthy",
-      confidence: "98%",
-      status: "success",
-    },
-    {
-      id: 2,
-      date: "2025-11-05",
-      result: "Brown Spot",
-      confidence: "94%",
-      status: "warning",
-    },
-    {
-      id: 3,
-      date: "2025-11-03",
-      result: "Leaf Blast",
-      confidence: "92%",
-      status: "destructive",
+      iconClass: "text-accent",
+      iconBgClass: "bg-accent/15",
     },
   ];
 
@@ -106,7 +91,10 @@ const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
     },
     {
       title: "Messages",
-      description: "Chat with experts",
+      description:
+        dashboardData.stats.unreadMessages > 0
+          ? `${dashboardData.stats.unreadMessages} unread messages`
+          : "Chat with experts",
       icon: MessageSquare,
       link: "/dashboard/chat",
       gradient: "from-purple-500 to-pink-600",
@@ -114,21 +102,8 @@ const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
     },
   ];
 
-  const upcomingTasks = [
-    {
-      id: 1,
-      task: "Apply fertilizer - Field A",
-      date: "Nov 12",
-      priority: "high",
-    },
-    {
-      id: 2,
-      task: "Irrigation check - Field B",
-      date: "Nov 14",
-      priority: "medium",
-    },
-    { id: 3, task: "Harvest - Field C", date: "Nov 20", priority: "high" },
-  ];
+  const recentScans = dashboardData.recentScans;
+  const upcomingTasks = dashboardData.upcomingTasks;
 
   return (
     <div className="min-h-screen bg-background">
@@ -162,11 +137,9 @@ const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
                     </p>
                   </div>
                   <div
-                    className={`w-12 h-12 rounded-lg bg-${
-                      stat.color.split("-")[1]
-                    }/10 flex items-center justify-center`}
+                    className={`w-12 h-12 rounded-lg ${stat.iconBgClass} flex items-center justify-center`}
                   >
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                    <stat.icon className={`w-6 h-6 ${stat.iconClass}`} />
                   </div>
                 </div>
               </CardContent>
@@ -200,6 +173,12 @@ const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
                         <p className="text-sm text-muted-foreground">
                           {action.description}
                         </p>
+                        {action.title === "Messages" &&
+                        dashboardData.stats.unreadMessages > 0 ? (
+                          <Badge className="mt-2" variant="secondary">
+                            {dashboardData.stats.unreadMessages} unread
+                          </Badge>
+                        ) : null}
                       </div>
                     </div>
                   </CardContent>
@@ -223,42 +202,48 @@ const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentScans.map((scan) => (
-                  <div
-                    key={scan.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
-                        {scan.status === "success" ? (
-                          <CheckCircle className="w-5 h-5 text-success" />
-                        ) : scan.status === "warning" ? (
-                          <AlertCircle className="w-5 h-5 text-warning" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-destructive" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {scan.result}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {scan.date}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={
-                        scan.status === "success" ? "default" : "secondary"
-                      }
+                {recentScans.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No scan history yet. Start with your first leaf scan.
+                  </p>
+                ) : (
+                  recentScans.map((scan) => (
+                    <div
+                      key={scan.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                     >
-                      {scan.confidence}
-                    </Badge>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
+                          {scan.status === "success" ? (
+                            <CheckCircle className="w-5 h-5 text-success" />
+                          ) : scan.status === "warning" ? (
+                            <AlertCircle className="w-5 h-5 text-warning" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-destructive" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            {scan.result}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {scan.date}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          scan.status === "success" ? "default" : "secondary"
+                        }
+                      >
+                        {scan.confidence}%
+                      </Badge>
+                    </div>
+                  ))
+                )}
               </div>
               <Button variant="outline" className="w-full mt-4" asChild>
-                <Link href="/scan-history">View All Scans</Link>
+                <Link href="/dashboard/disease-detect">View All Scans</Link>
               </Button>
             </CardContent>
           </Card>
@@ -274,36 +259,36 @@ const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {upcomingTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-start justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center shrink-0">
-                        <Clock className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {task.task}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {task.date}
-                        </p>
+                {upcomingTasks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No upcoming tasks right now. Add planting records to track
+                    your season.
+                  </p>
+                ) : (
+                  upcomingTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-start p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center shrink-0">
+                          <Clock className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            {task.task}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {task.date}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        task.priority === "high" ? "destructive" : "secondary"
-                      }
-                    >
-                      {task.priority}
-                    </Badge>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
               <Button variant="outline" className="w-full mt-4" asChild>
-                <Link href="/farm-records">Manage Tasks</Link>
+                <Link href="/dashboard/paddy-records">Manage Tasks</Link>
               </Button>
             </CardContent>
           </Card>
@@ -317,35 +302,52 @@ const FarmerDashboard = ({ userName }: FarmerDashboardProps) => {
               Market Price Update
             </CardTitle>
             <CardDescription>
-              Current paddy prices in your region
+              {dashboardData.marketRegion
+                ? `Current paddy prices in ${dashboardData.marketRegion}`
+                : "Current paddy prices in your region"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="p-4 rounded-lg bg-success/10 border border-success/20">
-                <p className="text-sm text-muted-foreground mb-1">White Rice</p>
-                <p className="text-2xl font-bold text-foreground">LKR 85/kg</p>
-                <p className="text-sm text-success mt-1">
-                  ↑ 2.5% from last week
-                </p>
+            {dashboardData.marketSummary.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No market price updates yet. Check again after mills publish
+                rates.
+              </p>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {dashboardData.marketSummary.map((item) => {
+                  const trendText =
+                    item.change > 0
+                      ? `↑ ${item.change}% from last week`
+                      : item.change < 0
+                        ? `↓ ${Math.abs(item.change)}% from last week`
+                        : "↔ No change";
+
+                  const toneClass =
+                    item.change > 0
+                      ? "bg-success/10 border-success/20 text-success"
+                      : item.change < 0
+                        ? "bg-warning/10 border-warning/20 text-warning"
+                        : "bg-accent/10 border-accent/20 text-accent";
+
+                  return (
+                    <div
+                      key={item.label}
+                      className={`p-4 rounded-lg border ${toneClass}`}
+                    >
+                      <p className="text-lg font-bold text-foreground mb-1">
+                        {item.label} - {formatLkr(item.price)}/kg
+                      </p>
+                      <p className="text-sm mt-1">{trendText}</p>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
-                <p className="text-sm text-muted-foreground mb-1">Red Rice</p>
-                <p className="text-2xl font-bold text-foreground">LKR 95/kg</p>
-                <p className="text-sm text-accent mt-1">↔ No change</p>
-              </div>
-              <div className="p-4 rounded-lg bg-warning/10 border border-warning/20">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Parboiled Rice
-                </p>
-                <p className="text-2xl font-bold text-foreground">LKR 78/kg</p>
-                <p className="text-sm text-warning mt-1">
-                  ↓ 1.2% from last week
-                </p>
-              </div>
-            </div>
+            )}
             <Button variant="outline" className="w-full mt-6" asChild>
-              <Link href="/market-prices">View Detailed Market Analysis</Link>
+              <Link href="/dashboard/market-prices">
+                View Detailed Market Analysis
+              </Link>
             </Button>
           </CardContent>
         </Card>

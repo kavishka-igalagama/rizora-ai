@@ -90,6 +90,11 @@ const OnboardingPage = () => {
     millName: "",
     regNo: "",
     address: "",
+    officerId: "",
+    designation: "",
+    department: "",
+    assignedDistrict: "",
+    assignedDivision: "",
     adminPassword: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,6 +115,11 @@ const OnboardingPage = () => {
       millName: "",
       regNo: "",
       address: "",
+      officerId: "",
+      designation: "",
+      department: "",
+      assignedDistrict: "",
+      assignedDivision: "",
       adminPassword: "",
     });
   };
@@ -129,6 +139,11 @@ const OnboardingPage = () => {
         millName: formData.millName,
         regNo: formData.regNo,
         address: formData.address,
+        officerId: formData.officerId,
+        designation: formData.designation,
+        department: formData.department,
+        assignedDistrict: formData.assignedDistrict,
+        assignedDivision: formData.assignedDivision,
         adminPassword: formData.adminPassword,
       });
 
@@ -165,7 +180,14 @@ const OnboardingPage = () => {
     formData.phone.trim();
 
   const isOfficerValid =
-    selectedRole === "officer" && formData.adminPassword.trim();
+    selectedRole === "officer" &&
+    formData.phone.trim() &&
+    formData.officerId.trim() &&
+    formData.designation.trim() &&
+    formData.department.trim() &&
+    formData.assignedDistrict.trim() &&
+    formData.assignedDivision.trim() &&
+    formData.adminPassword.trim();
 
   const isFormValid = Boolean(isFarmerValid || isMillValid || isOfficerValid);
 
@@ -348,19 +370,113 @@ const OnboardingPage = () => {
               )}
 
               {selectedRole === "officer" && (
-                <div className="space-y-2">
-                  <Label>පරිපාලක මුරපදය / Admin Password</Label>
-                  <Input
-                    type="password"
-                    value={formData.adminPassword}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        adminPassword: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter admin password"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>දුරකථන අංකය / Phone Number</Label>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          phone: e.target.value,
+                        }))
+                      }
+                      placeholder="077XXXXXXX"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>නිලධාරී හැඳුනුම් අංකය / Officer ID</Label>
+                    <Input
+                      value={formData.officerId}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          officerId: e.target.value,
+                        }))
+                      }
+                      placeholder="AGR-00123"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>තනතුර / Designation</Label>
+                    <Input
+                      value={formData.designation}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          designation: e.target.value,
+                        }))
+                      }
+                      placeholder="Agricultural Officer"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>දෙපාර්තමේන්තුව / Department</Label>
+                    <Input
+                      value={formData.department}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          department: e.target.value,
+                        }))
+                      }
+                      placeholder="Department of Agriculture"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>අයත් දිස්ත්‍රික්කය / Assigned District</Label>
+                    <Select
+                      value={formData.assignedDistrict}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          assignedDistrict: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-full h-12 text-base">
+                        <SelectValue placeholder="Choose assigned district..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {districts.map((district) => (
+                          <SelectItem
+                            key={district}
+                            value={district}
+                            className="text-base"
+                          >
+                            {district}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>අයත් කොට්ඨාසය / Assigned Division</Label>
+                    <Input
+                      value={formData.assignedDivision}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          assignedDivision: e.target.value,
+                        }))
+                      }
+                      placeholder="Eg: Kurunegala West"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>පරිපාලක මුරපදය / Admin Password</Label>
+                    <Input
+                      type="password"
+                      value={formData.adminPassword}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          adminPassword: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter admin password"
+                    />
+                  </div>
                 </div>
               )}
             </div>

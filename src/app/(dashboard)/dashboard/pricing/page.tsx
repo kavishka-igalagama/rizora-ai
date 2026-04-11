@@ -67,20 +67,18 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import Loading from "@/components/loading";
+import {
+  normalizeRiceVariety,
+  RICE_VARIETIES,
+  type RiceVariety,
+} from "@/lib/rice-varieties";
 
 // ─── Local types ───────────────────────────────────────────────
 type QualityGrade = "A" | "B" | "C" | "D";
-type PaddyVariety =
-  | "Samba"
-  | "Nadu"
-  | "Red Raw"
-  | "White Raw"
-  | "Basmathi"
-  | "Keeri Samba";
 
 interface PriceEntry {
   id: string;
-  variety: PaddyVariety;
+  variety: RiceVariety;
   grade: QualityGrade;
   pricePerKg: number;
   previousPrice: number;
@@ -100,11 +98,11 @@ interface GradeDefinition {
 }
 
 interface PriceFormFieldsProps {
-  formVariety: PaddyVariety;
+  formVariety: RiceVariety;
   formGrade: QualityGrade;
   formPrice: string;
   formNotes: string;
-  onVarietyChange: (value: PaddyVariety) => void;
+  onVarietyChange: (value: RiceVariety) => void;
   onGradeChange: (value: QualityGrade) => void;
   onPriceChange: (value: string) => void;
   onNotesChange: (value: string) => void;
@@ -146,14 +144,7 @@ const gradeDefinitions: GradeDefinition[] = [
   },
 ];
 
-const paddyVarieties: PaddyVariety[] = [
-  "Samba",
-  "Nadu",
-  "Red Raw",
-  "White Raw",
-  "Basmathi",
-  "Keeri Samba",
-];
+const paddyVarieties: RiceVariety[] = [...RICE_VARIETIES];
 
 const regions = [
   "Colombo",
@@ -164,8 +155,8 @@ const regions = [
   "Hambantota",
 ];
 
-const isPaddyVariety = (value: string): value is PaddyVariety =>
-  paddyVarieties.includes(value as PaddyVariety);
+const isPaddyVariety = (value: string): value is RiceVariety =>
+  normalizeRiceVariety(value) !== null;
 
 const isQualityGrade = (value: string): value is QualityGrade =>
   gradeDefinitions.some((grade) => grade.grade === value);
@@ -306,7 +297,7 @@ function mapPricingToEntry(p: {
     typeof p._id === "string" ? p._id : (p._id?.toString?.() ?? String(p._id));
   return {
     id,
-    variety: p.variety as PaddyVariety,
+    variety: normalizeRiceVariety(p.variety) ?? paddyVarieties[0],
     grade,
     pricePerKg: p.pricePerKg,
     previousPrice: p.pricePerKg,
@@ -329,7 +320,9 @@ const PriceManagementPage = () => {
   const [filterVariety, setFilterVariety] = useState<string>("all");
   const [filterGrade, setFilterGrade] = useState<string>("all");
 
-  const [formVariety, setFormVariety] = useState<PaddyVariety>("Samba");
+  const [formVariety, setFormVariety] = useState<RiceVariety>(
+    paddyVarieties[0],
+  );
   const [formGrade, setFormGrade] = useState<QualityGrade>("A");
   const [formPrice, setFormPrice] = useState("");
   const [formNotes, setFormNotes] = useState("");
@@ -373,7 +366,7 @@ const PriceManagementPage = () => {
   }, []);
 
   const resetForm = () => {
-    setFormVariety("Samba");
+    setFormVariety(paddyVarieties[0]);
     setFormGrade("A");
     setFormPrice("");
     setFormNotes("");
@@ -419,7 +412,8 @@ const PriceManagementPage = () => {
     if (result.field) {
       const newEntry: PriceEntry = {
         id: result.field._id.toString(),
-        variety: result.field.variety as PaddyVariety,
+        variety:
+          normalizeRiceVariety(result.field.variety) ?? paddyVarieties[0],
         grade: result.field.qualityGrade.replace("Grade ", "") as QualityGrade,
         pricePerKg: result.field.pricePerKg,
         previousPrice: result.field.pricePerKg,

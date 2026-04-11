@@ -9,6 +9,7 @@ import PaddyRecord, {
   IHarvestRecord,
   IPlantingRecord,
 } from "@/lib/models/PaddyRecord";
+import { normalizeRiceVariety } from "@/lib/rice-varieties";
 
 interface FieldsData {
   name: string;
@@ -299,6 +300,11 @@ export async function addPlantingRecord(
       return { success: false, error: "Missing required planting details" };
     }
 
+    const normalizedVariety = normalizeRiceVariety(data.variety);
+    if (!normalizedVariety) {
+      return { success: false, error: "Invalid rice variety" };
+    }
+
     const plantingDate = parseDateValue(data.date);
     if (!plantingDate) {
       return { success: false, error: "Invalid planting date" };
@@ -309,7 +315,7 @@ export async function addPlantingRecord(
 
     record.plantings.push({
       field: data.field,
-      variety: data.variety,
+      variety: normalizedVariety,
       date: plantingDate,
       area: data.area,
       status: data.status ?? "Growing",
@@ -407,6 +413,11 @@ export async function updatePlantingRecord(
       return { success: false, error: "Missing required planting details" };
     }
 
+    const normalizedVariety = normalizeRiceVariety(data.variety);
+    if (!normalizedVariety) {
+      return { success: false, error: "Invalid rice variety" };
+    }
+
     const plantingDate = parseDateValue(data.date);
     if (!plantingDate) {
       return { success: false, error: "Invalid planting date" };
@@ -416,7 +427,7 @@ export async function updatePlantingRecord(
     const expectedHarvestProvided = data.expectedHarvest !== undefined;
     const updateSet: Record<string, unknown> = {
       "plantings.$.field": data.field,
-      "plantings.$.variety": data.variety,
+      "plantings.$.variety": normalizedVariety,
       "plantings.$.date": plantingDate,
       "plantings.$.area": data.area,
     };
@@ -447,7 +458,7 @@ export async function updatePlantingRecord(
             ? clampPercent(data.progress)
             : updateSet["plantings.$.progress"] || 0,
         field: data.field,
-        variety: data.variety,
+        variety: normalizedVariety,
         area: data.area,
       } as unknown as IPlantingRecord);
 
@@ -766,6 +777,15 @@ export async function addHarvestRecord(
     }
 
     const record = await getOrCreateRecord(userId);
+    const normalizedVariety =
+      typeof data.variety === "string" && data.variety
+        ? normalizeRiceVariety(data.variety)
+        : undefined;
+
+    if (data.variety && !normalizedVariety) {
+      return { success: false, error: "Invalid rice variety" };
+    }
+
     record.harvests.push({
       field: data.field,
       date: harvestDate,
@@ -774,7 +794,7 @@ export async function addHarvestRecord(
       revenue: parseNumberValue(data.revenue),
       pricePerKg: parseNumberValue(data.pricePerKg),
       moisture: data.moisture || undefined,
-      variety: data.variety || undefined,
+      variety: normalizedVariety,
       soldTo: data.soldTo || undefined,
       notes: data.notes || undefined,
     } as IHarvestRecord);
@@ -880,7 +900,11 @@ export async function updateHarvestRecord(
     }
 
     if (data.variety) {
-      updateSet["harvests.$.variety"] = data.variety;
+      const normalizedVariety = normalizeRiceVariety(data.variety);
+      if (!normalizedVariety) {
+        return { success: false, error: "Invalid rice variety" };
+      }
+      updateSet["harvests.$.variety"] = normalizedVariety;
     } else if (data.variety !== undefined) {
       unset["harvests.$.variety"] = "";
     }

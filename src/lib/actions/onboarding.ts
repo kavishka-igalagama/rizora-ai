@@ -13,6 +13,11 @@ export interface OnboardingPayload {
   millName?: string;
   regNo?: string;
   address?: string;
+  officerId?: string;
+  designation?: string;
+  department?: string;
+  assignedDistrict?: string;
+  assignedDivision?: string;
   adminPassword?: string;
 }
 
@@ -33,6 +38,11 @@ export async function saveOnboarding(
     millName,
     regNo,
     address,
+    officerId,
+    designation,
+    department,
+    assignedDistrict,
+    assignedDivision,
     adminPassword,
   } = data ?? {};
 
@@ -66,6 +76,21 @@ export async function saveOnboarding(
   }
 
   if (role === "officer") {
+    if (
+      !phone ||
+      !officerId ||
+      !designation ||
+      !department ||
+      !assignedDistrict ||
+      !assignedDivision
+    ) {
+      return {
+        success: false,
+        error:
+          "Phone, officer ID, designation, department, assigned district, and division are required",
+      };
+    }
+
     const officerPassword = process.env.OFFICER_ADMIN_PASSWORD;
 
     if (!officerPassword) {
@@ -75,6 +100,14 @@ export async function saveOnboarding(
     if (adminPassword !== officerPassword) {
       return { success: false, error: "Invalid admin password" };
     }
+
+    updates.phone = phone;
+    updates.officerId = officerId;
+    updates.designation = designation;
+    updates.department = department;
+    updates.assignedDistrict = assignedDistrict;
+    updates.assignedDivision = assignedDivision;
+    updates.district = assignedDistrict;
   }
 
   try {

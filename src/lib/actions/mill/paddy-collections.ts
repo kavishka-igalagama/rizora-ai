@@ -10,6 +10,7 @@ import PaddyCollection, {
   type IPaddyCollection,
 } from "@/lib/models/PaddyCollection";
 import PurchaseRecord from "@/lib/models/PurchaseRecord";
+import { normalizeRiceVariety } from "@/lib/rice-varieties";
 
 export interface MillPaddyCollection {
   id: string;
@@ -208,6 +209,11 @@ export async function addPaddyCollection(
       return { success: false, error: "Missing required booking details" };
     }
 
+    const normalizedVariety = normalizeRiceVariety(data.variety);
+    if (!normalizedVariety) {
+      return { success: false, error: "Invalid rice variety" };
+    }
+
     const scheduledDate = new Date(data.scheduledDate);
     if (Number.isNaN(scheduledDate.getTime())) {
       return { success: false, error: "Invalid scheduled date" };
@@ -234,7 +240,7 @@ export async function addPaddyCollection(
       farmerPhone: data.farmerPhone,
       location: data.location,
       district: data.district,
-      variety: data.variety,
+      variety: normalizedVariety,
       estimatedQuantity,
       scheduledDate,
       scheduledTime: data.scheduledTime,

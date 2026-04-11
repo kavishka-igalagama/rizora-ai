@@ -72,6 +72,7 @@ import {
   schedulePaddyCollection,
   updatePaddyCollectionStatus,
 } from "@/lib/actions/mill/paddy-collections";
+import { RICE_VARIETIES } from "@/lib/rice-varieties";
 
 // Types
 type BookingStatus =
@@ -656,14 +657,7 @@ const PaddyCollections = () => {
                             <SelectValue placeholder="Select variety" />
                           </SelectTrigger>
                           <SelectContent>
-                            {[
-                              "BG 352",
-                              "BG 300",
-                              "Samba",
-                              "Keeri Samba",
-                              "Red Nadu",
-                              "Nadu",
-                            ].map((v) => (
+                            {RICE_VARIETIES.map((v) => (
                               <SelectItem key={v} value={v}>
                                 {v}
                               </SelectItem>

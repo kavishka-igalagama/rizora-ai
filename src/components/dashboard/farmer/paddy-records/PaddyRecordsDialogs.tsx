@@ -33,6 +33,7 @@ import { AlertCircle, Droplets, Edit, Eye, Sprout, Wheat } from "lucide-react";
 import type { FertilizerRecord } from "@/components/dashboard/farmer/paddy-records/FertilizerRecordsSection";
 import type { HarvestRecord } from "@/components/dashboard/farmer/paddy-records/HarvestRecordsSection";
 import type { PlantingRecord } from "@/components/dashboard/farmer/paddy-records/PlantingRecordsSection";
+import { RICE_VARIETIES } from "@/lib/rice-varieties";
 
 interface PlantingFormState {
   field: string;
@@ -172,12 +173,11 @@ const PaddyRecordsDialogs: FC<PaddyRecordsDialogsProps> = ({
                   <SelectValue placeholder="Select variety" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BG 300">BG 300</SelectItem>
-                  <SelectItem value="BG 352">BG 352</SelectItem>
-                  <SelectItem value="BG 450">BG 450</SelectItem>
-                  <SelectItem value="AT 362">AT 362</SelectItem>
-                  <SelectItem value="BG 94-1">BG 94-1</SelectItem>
-                  <SelectItem value="Suwandel">Suwandel</SelectItem>
+                  {RICE_VARIETIES.map((variety) => (
+                    <SelectItem key={variety} value={variety}>
+                      {variety}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -462,12 +462,11 @@ const PaddyRecordsDialogs: FC<PaddyRecordsDialogsProps> = ({
                   <SelectValue placeholder="Select variety" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BG 300">BG 300</SelectItem>
-                  <SelectItem value="BG 352">BG 352</SelectItem>
-                  <SelectItem value="BG 450">BG 450</SelectItem>
-                  <SelectItem value="AT 362">AT 362</SelectItem>
-                  <SelectItem value="BG 94-1">BG 94-1</SelectItem>
-                  <SelectItem value="Suwandel">Suwandel</SelectItem>
+                  {RICE_VARIETIES.map((variety) => (
+                    <SelectItem key={variety} value={variety}>
+                      {variety}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -859,15 +858,26 @@ const PaddyRecordsDialogs: FC<PaddyRecordsDialogsProps> = ({
                 </div>
                 <div className="space-y-2">
                   <Label>Variety</Label>
-                  <Input
+                  <Select
                     value={plantingForm.variety}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setPlantingForm({
                         ...plantingForm,
-                        variety: e.target.value,
+                        variety: v,
                       })
                     }
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select variety" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RICE_VARIETIES.map((variety) => (
+                        <SelectItem key={variety} value={variety}>
+                          {variety}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1063,15 +1073,26 @@ const PaddyRecordsDialogs: FC<PaddyRecordsDialogsProps> = ({
                 </div>
                 <div className="space-y-2">
                   <Label>Variety</Label>
-                  <Input
+                  <Select
                     value={harvestForm.variety}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setHarvestForm({
                         ...harvestForm,
-                        variety: e.target.value,
+                        variety: v,
                       })
                     }
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select variety" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RICE_VARIETIES.map((variety) => (
+                        <SelectItem key={variety} value={variety}>
+                          {variety}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

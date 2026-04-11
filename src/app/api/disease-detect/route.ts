@@ -5,6 +5,7 @@ import {
 } from "@/lib/cloudinary";
 import connectDB from "@/lib/mongodb";
 import DiseaseScan from "@/lib/models/DiseaseScan";
+import User from "@/lib/models/User";
 
 type InferenceResult = {
   disease: string;
@@ -210,7 +211,26 @@ export async function GET() {
       .select("disease confidence treatmentSuggestions imageUrl createdAt")
       .lean();
 
-    return Response.json({ history });
+    const userProfile = await User.findOne({ clerkId: userId })
+      .select("firstName lastName email phone district")
+      .lean<{
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+        district?: string;
+      } | null>();
+
+    return Response.json({
+      history,
+      farmerInfo: {
+        firstName: userProfile?.firstName || "",
+        lastName: userProfile?.lastName || "",
+        email: userProfile?.email || "",
+        phone: userProfile?.phone || "",
+        district: userProfile?.district || "",
+      },
+    });
   } catch (error) {
     console.error("[disease-detect] history fetch failed", error);
 

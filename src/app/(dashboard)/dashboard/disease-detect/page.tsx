@@ -40,7 +40,6 @@ import {
 } from "@/components/ui/table";
 import {
   Bug,
-  CalendarDays,
   CheckCircle2,
   Clock3,
   Droplets,
@@ -57,6 +56,7 @@ import {
   Trash2,
   Zap,
   History,
+  Download,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
@@ -74,6 +74,14 @@ interface ScanHistoryItem {
   treatmentSuggestions: string[];
   imageUrl: string;
   createdAt: string;
+}
+
+interface FarmerInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  district: string;
 }
 
 interface CommonDisease {
@@ -180,6 +188,37 @@ const canvasToJpegBlob = (
     );
   });
 
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Failed to read image blob."));
+    reader.readAsDataURL(blob);
+  });
+
+const getImageDataUrl = async (source: string): Promise<string> => {
+  if (source.startsWith("data:image")) {
+    return source;
+  }
+
+  const response = await fetch(source);
+  if (!response.ok) {
+    throw new Error("Failed to load disease image for PDF report.");
+  }
+
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+};
+
+const getSafeReportFileName = (disease: string) => {
+  const normalizedDisease = disease
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `rizora-disease-report-${normalizedDisease || "scan"}-${stamp}.pdf`;
+};
+
 const DiseaseDetection = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -197,6 +236,14 @@ const DiseaseDetection = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [scanToDeleteId, setScanToDeleteId] = useState<string | null>(null);
   const [isDeletingScan, setIsDeletingScan] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [farmerInfo, setFarmerInfo] = useState<FarmerInfo>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    district: "",
+  });
 
   const loadScanHistory = async () => {
     setIsHistoryLoading(true);
@@ -209,7 +256,10 @@ const DiseaseDetection = () => {
       });
 
       const data = (await response.json()) as
-        | { history: ScanHistoryItem[] }
+        | {
+            history: ScanHistoryItem[];
+            farmerInfo?: Partial<FarmerInfo>;
+          }
         | { error?: string };
 
       if (!response.ok || !("history" in data)) {
@@ -218,6 +268,13 @@ const DiseaseDetection = () => {
       }
 
       setScanHistory(data.history);
+      setFarmerInfo({
+        firstName: data.farmerInfo?.firstName || "",
+        lastName: data.farmerInfo?.lastName || "",
+        email: data.farmerInfo?.email || "",
+        phone: data.farmerInfo?.phone || "",
+        district: data.farmerInfo?.district || "",
+      });
     } catch (error) {
       setHistoryError(
         error instanceof Error
@@ -427,6 +484,159 @@ const DiseaseDetection = () => {
     await handleDeleteScan(scanToDeleteId);
     setIsDeleteDialogOpen(false);
     setScanToDeleteId(null);
+  };
+
+  const handleExportPdf = async (payload: {
+    disease: string;
+    confidence: number;
+    treatmentSuggestions: string[];
+    imageSource: string;
+    createdAt?: string;
+  }) => {
+    const fullName = `${farmerInfo.firstName} ${farmerInfo.lastName}`.trim();
+    if (!fullName) {
+      setErrorMessage(
+        "Farmer name is missing. Please complete onboarding profile.",
+      );
+      return;
+    }
+
+    if (
+      !farmerInfo.email.trim() ||
+      !farmerInfo.phone.trim() ||
+      !farmerInfo.district.trim()
+    ) {
+      setErrorMessage(
+        "Email, phone number, or district is missing in your profile.",
+      );
+      return;
+    }
+
+    setIsExportingPdf(true);
+    setErrorMessage(null);
+
+    try {
+      const [{ jsPDF }, imageDataUrl] = await Promise.all([
+        import("jspdf"),
+        getImageDataUrl(payload.imageSource),
+      ]);
+
+      const doc = new jsPDF({
+        unit: "pt",
+        format: "a4",
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 40;
+      const contentWidth = pageWidth - margin * 2;
+
+      doc.setFillColor(8, 111, 84);
+      doc.roundedRect(margin, 28, contentWidth, 82, 12, 12, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text("Rizora Disease Detection Report", margin + 20, 60);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(
+        `Generated: ${new Date(payload.createdAt || Date.now()).toLocaleString()}`,
+        margin + 20,
+        84,
+      );
+
+      doc.setTextColor(28, 35, 43);
+      doc.setFillColor(245, 249, 247);
+      doc.roundedRect(margin, 130, contentWidth, 92, 10, 10, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Farmer Information", margin + 16, 154);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Name: ${fullName}`, margin + 16, 176);
+      doc.text(`Email: ${farmerInfo.email}`, margin + 16, 194);
+      doc.text(`Phone Number: ${farmerInfo.phone}`, margin + 320, 176);
+      doc.text(`District: ${farmerInfo.district}`, margin + 320, 194);
+
+      doc.setFillColor(252, 247, 235);
+      doc.roundedRect(margin, 236, contentWidth, 94, 10, 10, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Detection Summary", margin + 16, 260);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(`Disease Name: ${payload.disease}`, margin + 16, 282);
+      doc.text(
+        `Confidence Level: ${payload.confidence.toFixed(2)}%`,
+        margin + 16,
+        302,
+      );
+
+      const imageSectionTop = 354;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Disease Image", margin, imageSectionTop);
+
+      const imageBoxTop = imageSectionTop + 10;
+      const imageBoxWidth = 220;
+      const imageBoxHeight = 170;
+      doc.setDrawColor(210, 217, 215);
+      doc.roundedRect(margin, imageBoxTop, imageBoxWidth, imageBoxHeight, 8, 8);
+      doc.addImage(
+        imageDataUrl,
+        "JPEG",
+        margin + 8,
+        imageBoxTop + 8,
+        imageBoxWidth - 16,
+        imageBoxHeight - 16,
+      );
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Treatments", margin + imageBoxWidth + 24, imageSectionTop);
+
+      const treatments =
+        payload.treatmentSuggestions.length > 0
+          ? payload.treatmentSuggestions
+          : ["No treatment suggestions available."];
+
+      let treatmentCursorY = imageBoxTop + 20;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      const treatmentTextWidth = contentWidth - imageBoxWidth - 48;
+
+      treatments.forEach((item, index) => {
+        const wrapped = doc.splitTextToSize(
+          `${index + 1}. ${item}`,
+          treatmentTextWidth,
+        );
+        doc.text(wrapped, margin + imageBoxWidth + 24, treatmentCursorY);
+        treatmentCursorY += wrapped.length * 14 + 6;
+      });
+
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(90, 99, 107);
+      doc.setFontSize(9);
+      doc.text(
+        "Note: This AI result is supportive guidance. Confirm final treatment with an agricultural officer.",
+        margin,
+        pageHeight - 28,
+      );
+
+      doc.save(getSafeReportFileName(payload.disease));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate PDF report.",
+      );
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   return (
@@ -674,6 +884,40 @@ const DiseaseDetection = () => {
                         )}
                       </div>
                     </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        if (!uploadedImage) {
+                          setErrorMessage(
+                            "Upload image preview is required to export the report.",
+                          );
+                          return;
+                        }
+
+                        void handleExportPdf({
+                          disease: detectionResult.disease,
+                          confidence: detectionResult.confidence,
+                          treatmentSuggestions:
+                            detectionResult.treatmentSuggestions,
+                          imageSource: uploadedImage,
+                        });
+                      }}
+                      disabled={isExportingPdf}
+                    >
+                      {isExportingPdf ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating PDF...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Export as PDF
+                        </>
+                      )}
+                    </Button>
                   </CardContent>
                 </Card>
               ) : (
@@ -964,6 +1208,34 @@ const DiseaseDetection = () => {
                     ))}
                   </div>
                 </div>
+
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() =>
+                    void handleExportPdf({
+                      disease: selectedHistoryItem.disease,
+                      confidence: selectedHistoryItem.confidence,
+                      treatmentSuggestions:
+                        selectedHistoryItem.treatmentSuggestions,
+                      imageSource: selectedHistoryItem.imageUrl,
+                      createdAt: selectedHistoryItem.createdAt,
+                    })
+                  }
+                  disabled={isExportingPdf}
+                >
+                  {isExportingPdf ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export This Scan as PDF
+                    </>
+                  )}
+                </Button>
               </>
             )}
           </DialogContent>
