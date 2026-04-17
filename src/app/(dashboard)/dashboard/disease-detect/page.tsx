@@ -74,6 +74,8 @@ interface ScanHistoryItem {
   treatmentSuggestions: string[];
   imageUrl: string;
   createdAt: string;
+  officerNotes?: string;
+  scanStatus?: "pending" | "reviewed" | "escalated";
 }
 
 interface FarmerInfo {
@@ -217,6 +219,25 @@ const getSafeReportFileName = (disease: string) => {
     .replace(/^-+|-+$/g, "");
   const stamp = new Date().toISOString().slice(0, 10);
   return `rizora-disease-report-${normalizedDisease || "scan"}-${stamp}.pdf`;
+};
+
+const getScanStatusBadge = (
+  status: ScanHistoryItem["scanStatus"],
+  hasOfficerNotes: boolean,
+) => {
+  if (status === "escalated") {
+    return <Badge variant="destructive">Escalated</Badge>;
+  }
+
+  if (status === "reviewed") {
+    return <Badge className="bg-primary text-white">Reviewed</Badge>;
+  }
+
+  if (hasOfficerNotes) {
+    return <Badge variant="secondary">Officer Note Added</Badge>;
+  }
+
+  return <Badge variant="outline">Pending Review</Badge>;
 };
 
 const DiseaseDetection = () => {
@@ -1018,6 +1039,7 @@ const DiseaseDetection = () => {
                           <TableHead className="w-30">Scan ID</TableHead>
                           <TableHead>Date & Time</TableHead>
                           <TableHead>Disease</TableHead>
+                          <TableHead>Officer Update</TableHead>
                           <TableHead className="w-55">Confidence</TableHead>
                           <TableHead className="text-right">Action</TableHead>
                         </TableRow>
@@ -1060,6 +1082,12 @@ const DiseaseDetection = () => {
                                   {scan.disease}
                                 </span>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {getScanStatusBadge(
+                                scan.scanStatus,
+                                Boolean(scan.officerNotes?.trim()),
+                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -1111,7 +1139,7 @@ const DiseaseDetection = () => {
         </Tabs>
 
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="sm:max-w-3xl">
+          <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
             {selectedHistoryItem && (
               <>
                 <DialogHeader className="border-b border-border pb-4">
@@ -1183,6 +1211,30 @@ const DiseaseDetection = () => {
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    Officer Notes
+                  </p>
+                  {selectedHistoryItem.officerNotes?.trim() ? (
+                    <div className="rounded-lg border border-primary/25 bg-linear-to-r from-primary/10 to-emerald-500/10 p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        {getScanStatusBadge(
+                          selectedHistoryItem.scanStatus,
+                          true,
+                        )}
+                      </div>
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                        {selectedHistoryItem.officerNotes}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Officer review note is not available yet. Please check
+                      again later.
+                    </p>
+                  )}
                 </div>
 
                 <div className="rounded-xl border border-border bg-muted/20 p-4">

@@ -5,6 +5,9 @@ export interface IDiseaseScan extends Document {
   disease: string;
   confidence: number;
   treatmentSuggestions: string[];
+  scanStatus: "pending" | "reviewed" | "escalated";
+  officerNotes?: string;
+  reviewedBy?: string;
   imageUrl: string;
   imagePublicId: string;
   imageFormat?: string;
@@ -38,6 +41,19 @@ const DiseaseScanSchema: Schema<IDiseaseScan> = new Schema(
       required: true,
       default: [],
     },
+    scanStatus: {
+      type: String,
+      enum: ["pending", "reviewed", "escalated"],
+      default: "pending",
+      index: true,
+    },
+    officerNotes: {
+      type: String,
+      default: "",
+    },
+    reviewedBy: {
+      type: String,
+    },
     imageUrl: {
       type: String,
       required: true,
@@ -66,6 +82,7 @@ const DiseaseScanSchema: Schema<IDiseaseScan> = new Schema(
 );
 
 DiseaseScanSchema.index({ clerkId: 1, createdAt: -1 });
+DiseaseScanSchema.index({ scanStatus: 1, createdAt: -1 });
 
 const DiseaseScan: Model<IDiseaseScan> =
   mongoose.models.DiseaseScan ||

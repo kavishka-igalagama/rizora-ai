@@ -164,6 +164,8 @@ export async function POST(req: Request) {
       disease: result.disease,
       confidence: result.confidence,
       treatmentSuggestions,
+      scanStatus: "pending",
+      officerNotes: "",
       imageUrl: uploadedImage.secureUrl,
       imagePublicId: uploadedImage.publicId,
       imageFormat: uploadedImage.format,
@@ -208,7 +210,9 @@ export async function GET() {
     const history = await DiseaseScan.find({ clerkId: userId })
       .sort({ createdAt: -1 })
       .limit(30)
-      .select("disease confidence treatmentSuggestions imageUrl createdAt")
+      .select(
+        "disease confidence treatmentSuggestions imageUrl createdAt officerNotes scanStatus",
+      )
       .lean();
 
     const userProfile = await User.findOne({ clerkId: userId })

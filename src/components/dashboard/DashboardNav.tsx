@@ -14,7 +14,6 @@ import {
   MessageSquare,
   Microscope,
   Package,
-  Settings,
   TrendingUp,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -207,8 +206,8 @@ export default function DashboardNav({
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      label: "Disease Detection",
-      href: "/dashboard/disease-detect",
+      label: "Disease Submissions",
+      href: "/dashboard/disease-submissions",
       icon: <Microscope className="h-5 w-5" />,
     },
   ];
@@ -223,11 +222,6 @@ export default function DashboardNav({
       href: "/dashboard/notifications",
       label: "Notifications",
       icon: <Bell className="h-5 w-5" />,
-    },
-    {
-      href: "/settings",
-      label: "Settings",
-      icon: <Settings className="h-5 w-5" />,
     },
   ];
 
