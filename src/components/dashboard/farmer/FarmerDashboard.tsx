@@ -8,6 +8,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  DialogClose,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import type { FarmerDashboardData } from "@/lib/actions/farmer/dashboard";
 import {
   Microscope,
@@ -20,6 +30,7 @@ import {
   CheckCircle,
   Clock,
   BarChart3,
+  Megaphone,
 } from "lucide-react";
 
 interface FarmerDashboardProps {
@@ -104,6 +115,7 @@ const FarmerDashboard = ({ userName, dashboardData }: FarmerDashboardProps) => {
 
   const recentScans = dashboardData.recentScans;
   const upcomingTasks = dashboardData.upcomingTasks;
+  const advisories = dashboardData.advisories;
 
   return (
     <div className="min-h-screen bg-background">
@@ -187,6 +199,129 @@ const FarmerDashboard = ({ userName, dashboardData }: FarmerDashboardProps) => {
             ))}
           </div>
         </div>
+
+        {/* Advisory Updates */}
+        <Card className="mb-8 border-border overflow-hidden">
+          <CardHeader className="bg-linear-to-r from-primary/10 via-primary/5 to-transparent border-b">
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-primary" />
+              Advisory Updates
+            </CardTitle>
+            <CardDescription>
+              Latest published recommendations from agricultural officers
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 max-h-120 overflow-y-auto">
+            {advisories.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No published advisories yet. Updates from officers will appear
+                here.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pr-1">
+                {advisories.map((advisory) => (
+                  <article
+                    key={advisory.id}
+                    className="rounded-xl border border-border bg-card p-4 hover:shadow-medium transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary/15 text-primary"
+                      >
+                        {advisory.disease}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {advisory.publishedDate}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-foreground leading-tight mb-2 line-clamp-2">
+                      {advisory.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
+                      {advisory.content}
+                    </p>
+                    <div className="mt-4 pt-3 border-t border-border/70 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="block text-xs text-muted-foreground truncate">
+                          By {advisory.author}
+                        </span>
+                        <span className="text-xs font-medium text-primary">
+                          {advisory.id}
+                        </span>
+                      </div>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            View
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
+                          <div className="bg-linear-to-r from-primary/15 via-primary/5 to-transparent border-b px-6 py-5">
+                            <DialogHeader className="space-y-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-primary/15 text-primary"
+                                >
+                                  {advisory.disease}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {advisory.publishedDate}
+                                </span>
+                              </div>
+                              <DialogTitle className="text-left leading-tight text-xl">
+                                {advisory.title}
+                              </DialogTitle>
+                              <DialogDescription className="text-left">
+                                Officer advisory details for your quick
+                                reference
+                              </DialogDescription>
+                            </DialogHeader>
+                          </div>
+
+                          <div className="px-6 pt-5 pb-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                              <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                  Published By
+                                </p>
+                                <p className="text-sm font-medium text-foreground truncate">
+                                  {advisory.author}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                  Advisory ID
+                                </p>
+                                <p className="text-sm font-medium text-primary">
+                                  {advisory.id}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="max-h-[50vh] overflow-y-auto rounded-lg border bg-background px-4 py-3">
+                              <p className="text-sm leading-7 text-foreground whitespace-pre-line">
+                                {advisory.content}
+                              </p>
+                            </div>
+                          </div>
+
+                          <DialogFooter className="px-6 pb-5 pt-0">
+                            <DialogClose asChild>
+                              <Button variant="outline">Close</Button>
+                            </DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Recent Scans */}

@@ -44,6 +44,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import Loading from "@/components/loading";
 
 type SubmissionStatus = "pending" | "reviewed" | "escalated";
 
@@ -265,6 +266,10 @@ const DiseaseSubmissionsPage = () => {
     }
   };
 
+  if (isLoading) {
+    return <Loading />;
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <main className="flex-1 p-6 md:p-8 mx-auto w-full">
@@ -429,16 +434,7 @@ const DiseaseSubmissionsPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="text-center py-12 text-muted-foreground"
-                      >
-                        Loading submissions...
-                      </TableCell>
-                    </TableRow>
-                  ) : filtered.length === 0 ? (
+                  {filtered.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={8}

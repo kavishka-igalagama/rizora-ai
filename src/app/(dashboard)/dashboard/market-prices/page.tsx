@@ -55,6 +55,7 @@ import {
   RICE_VARIETIES,
   type RiceVariety,
 } from "@/lib/rice-varieties";
+import Loading from "@/components/loading";
 
 type ApiMarketPrice = {
   id: string;
@@ -580,11 +581,7 @@ const MarketPrices = () => {
   }, [activePrices]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <RefreshCw className="w-6 h-6 animate-spin" />
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

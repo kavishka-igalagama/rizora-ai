@@ -6,6 +6,7 @@ import DiseaseScan from "@/lib/models/DiseaseScan";
 import Message from "@/lib/models/Message";
 import PaddyRecord from "@/lib/models/PaddyRecord";
 import Pricing from "@/lib/models/Pricing";
+import Advisory from "@/lib/models/Advisory";
 import { normalizeRiceVariety } from "@/lib/rice-varieties";
 import User from "@/lib/models/User";
 
@@ -38,6 +39,14 @@ export interface FarmerDashboardData {
     change: number;
   }>;
   marketRegion: string | null;
+  advisories: Array<{
+    id: string;
+    title: string;
+    content: string;
+    disease: string;
+    publishedDate: string;
+    author: string;
+  }>;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,6 +73,7 @@ const getEmptyDashboardData = (): FarmerDashboardData => ({
   upcomingTasks: [],
   marketSummary: [],
   marketRegion: null,
+  advisories: [],
 });
 
 export async function getFarmerDashboardData(): Promise<FarmerDashboardData> {
@@ -75,48 +85,63 @@ export async function getFarmerDashboardData(): Promise<FarmerDashboardData> {
 
   await connectDB();
 
-  const [scanDocs, paddyRecord, user, unreadMessages] = await Promise.all([
-    DiseaseScan.find({ clerkId: userId })
-      .sort({ createdAt: -1 })
-      .limit(24)
-      .select("_id disease confidence createdAt")
-      .lean<
-        {
-          _id: { toString: () => string };
-          disease: string;
-          confidence: number;
-          createdAt: Date;
-        }[]
-      >(),
-    PaddyRecord.findOne({ clerkId: userId })
-      .select("plantings harvests fertilizerApplications")
-      .lean<{
-        plantings?: Array<{
-          _id: { toString: () => string };
-          field: string;
-          status: "Growing" | "Harvested";
-          expectedHarvest?: Date;
-          date: Date;
-        }>;
-        fertilizerApplications?: Array<{
-          _id: { toString: () => string };
-          field: string;
-          date: Date;
-          type?: string;
-        }>;
-        harvests?: Array<{
-          date: Date;
-          field: string;
-          revenue?: number;
-          yield: number;
-          pricePerKg?: number;
-        }>;
-      } | null>(),
-    User.findOne({ clerkId: userId })
-      .select("district")
-      .lean<{ district?: string } | null>(),
-    Message.countDocuments({ recipientId: userId, readAt: null }),
-  ]);
+  const [scanDocs, paddyRecord, user, unreadMessages, advisoryDocs] =
+    await Promise.all([
+      DiseaseScan.find({ clerkId: userId })
+        .sort({ createdAt: -1 })
+        .limit(24)
+        .select("_id disease confidence createdAt")
+        .lean<
+          {
+            _id: { toString: () => string };
+            disease: string;
+            confidence: number;
+            createdAt: Date;
+          }[]
+        >(),
+      PaddyRecord.findOne({ clerkId: userId })
+        .select("plantings harvests fertilizerApplications")
+        .lean<{
+          plantings?: Array<{
+            _id: { toString: () => string };
+            field: string;
+            status: "Growing" | "Harvested";
+            expectedHarvest?: Date;
+            date: Date;
+          }>;
+          fertilizerApplications?: Array<{
+            _id: { toString: () => string };
+            field: string;
+            date: Date;
+            type?: string;
+          }>;
+          harvests?: Array<{
+            date: Date;
+            field: string;
+            revenue?: number;
+            yield: number;
+            pricePerKg?: number;
+          }>;
+        } | null>(),
+      User.findOne({ clerkId: userId })
+        .select("district")
+        .lean<{ district?: string } | null>(),
+      Message.countDocuments({ recipientId: userId, readAt: null }),
+      Advisory.find({ published: true })
+        .sort({ publishedDate: -1, createdAt: -1 })
+        .limit(3)
+        .select("advisoryId title content disease publishedDate author")
+        .lean<
+          {
+            advisoryId: string;
+            title: string;
+            content: string;
+            disease: string;
+            publishedDate: string;
+            author: string;
+          }[]
+        >(),
+    ]);
 
   const healthyScans = scanDocs.filter((scan) => isHealthyScan(scan.disease));
   const diseaseScans = scanDocs.length - healthyScans.length;
@@ -271,5 +296,13 @@ export async function getFarmerDashboardData(): Promise<FarmerDashboardData> {
     upcomingTasks,
     marketSummary,
     marketRegion: district || null,
+    advisories: advisoryDocs.map((advisory) => ({
+      id: advisory.advisoryId,
+      title: advisory.title,
+      content: advisory.content,
+      disease: advisory.disease,
+      publishedDate: advisory.publishedDate,
+      author: advisory.author,
+    })),
   };
 }

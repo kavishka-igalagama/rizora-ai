@@ -11,6 +11,8 @@ import {
   DollarSign,
   LayoutDashboard,
   Leaf,
+  LineChart,
+  Megaphone,
   MessageSquare,
   Microscope,
   Package,
@@ -209,6 +211,16 @@ export default function DashboardNav({
       label: "Disease Submissions",
       href: "/dashboard/disease-submissions",
       icon: <Microscope className="h-5 w-5" />,
+    },
+    {
+      href: "/dashboard/mill-pricing",
+      label: "Mill Pricing",
+      icon: <LineChart className="h-5 w-5" />,
+    },
+    {
+      label: "Advisory Management",
+      href: "/dashboard/advisory",
+      icon: <Megaphone className="h-5 w-5" />,
     },
   ];
 
