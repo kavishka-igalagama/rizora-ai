@@ -5,6 +5,7 @@ import {
 } from "@/lib/cloudinary";
 import connectDB from "@/lib/mongodb";
 import DiseaseScan from "@/lib/models/DiseaseScan";
+import User from "@/lib/models/User";
 
 type InferenceResult = {
   disease: string;
@@ -163,6 +164,8 @@ export async function POST(req: Request) {
       disease: result.disease,
       confidence: result.confidence,
       treatmentSuggestions,
+      scanStatus: "pending",
+      officerNotes: "",
       imageUrl: uploadedImage.secureUrl,
       imagePublicId: uploadedImage.publicId,
       imageFormat: uploadedImage.format,
@@ -207,10 +210,31 @@ export async function GET() {
     const history = await DiseaseScan.find({ clerkId: userId })
       .sort({ createdAt: -1 })
       .limit(30)
-      .select("disease confidence treatmentSuggestions imageUrl createdAt")
+      .select(
+        "disease confidence treatmentSuggestions imageUrl createdAt officerNotes scanStatus",
+      )
       .lean();
 
-    return Response.json({ history });
+    const userProfile = await User.findOne({ clerkId: userId })
+      .select("firstName lastName email phone district")
+      .lean<{
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+        district?: string;
+      } | null>();
+
+    return Response.json({
+      history,
+      farmerInfo: {
+        firstName: userProfile?.firstName || "",
+        lastName: userProfile?.lastName || "",
+        email: userProfile?.email || "",
+        phone: userProfile?.phone || "",
+        district: userProfile?.district || "",
+      },
+    });
   } catch (error) {
     console.error("[disease-detect] history fetch failed", error);
 

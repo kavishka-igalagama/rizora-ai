@@ -4,6 +4,8 @@ import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import Pricing, { IPricing } from "@/lib/models/Pricing";
 import { getCurrentUserDistrict } from "@/lib/auth";
+import { publishMarketPricesUpdate } from "@/lib/market-prices-realtime";
+import { normalizeRiceVariety } from "@/lib/rice-varieties";
 
 export async function fetchCurrentUserDistrict(): Promise<{
   success: boolean;
@@ -40,6 +42,11 @@ export async function addNewPricing(
       return { success: false, error: "Missing required field details" };
     }
 
+    const normalizedVariety = normalizeRiceVariety(data.variety);
+    if (!normalizedVariety) {
+      return { success: false, error: "Invalid rice variety" };
+    }
+
     const region = data.region ?? (await getCurrentUserDistrict());
     if (!region) {
       return {
@@ -52,11 +59,18 @@ export async function addNewPricing(
     const pricing = await Pricing.create({
       millId: userId,
       region,
-      variety: data.variety,
+      variety: normalizedVariety,
       qualityGrade: data.qualityGrade,
       pricePerKg: data.pricePerKg,
       isActive: typeof data.isActive === "boolean" ? data.isActive : true,
       notes: data.notes,
+    });
+
+    await publishMarketPricesUpdate({
+      action: "created",
+      pricingId: pricing._id.toString(),
+      millId: pricing.millId,
+      updatedAt: pricing.updatedAt.toISOString(),
     });
 
     return {
@@ -122,14 +136,36 @@ export async function updatePricing(
 
   try {
     await connectDB();
+    const normalizedVariety =
+      typeof data.variety === "string"
+        ? normalizeRiceVariety(data.variety)
+        : undefined;
+
+    if (typeof data.variety === "string" && !normalizedVariety) {
+      return { success: false, error: "Invalid rice variety" };
+    }
+
+    const updates = {
+      ...data,
+      ...(normalizedVariety ? { variety: normalizedVariety } : {}),
+    };
+
     const pricing = await Pricing.findOneAndUpdate(
       { _id: id, millId: userId },
-      { $set: data },
+      { $set: updates },
       { new: true },
     );
     if (!pricing) {
       return { success: false, error: "Pricing not found or access denied" };
     }
+
+    await publishMarketPricesUpdate({
+      action: "updated",
+      pricingId: pricing._id.toString(),
+      millId: pricing.millId,
+      updatedAt: pricing.updatedAt.toISOString(),
+    });
+
     return {
       success: true,
       field: JSON.parse(JSON.stringify(pricing)) as IPricing,
@@ -161,6 +197,14 @@ export async function deletePricing(
     if (!result) {
       return { success: false, error: "Pricing not found or access denied" };
     }
+
+    await publishMarketPricesUpdate({
+      action: "deleted",
+      pricingId: result._id.toString(),
+      millId: result.millId,
+      updatedAt: new Date().toISOString(),
+    });
+
     return { success: true };
   } catch (error: unknown) {
     console.error("Error deleting pricing:", error);

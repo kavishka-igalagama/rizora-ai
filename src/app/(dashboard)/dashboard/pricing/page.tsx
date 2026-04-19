@@ -67,26 +67,23 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import Loading from "@/components/loading";
+import {
+  normalizeRiceVariety,
+  RICE_VARIETIES,
+  type RiceVariety,
+} from "@/lib/rice-varieties";
 
 // ─── Local types ───────────────────────────────────────────────
 type QualityGrade = "A" | "B" | "C" | "D";
-type PaddyVariety =
-  | "Samba"
-  | "Nadu"
-  | "Red Raw"
-  | "White Raw"
-  | "Basmathi"
-  | "Keeri Samba";
 
 interface PriceEntry {
   id: string;
-  variety: PaddyVariety;
+  variety: RiceVariety;
   grade: QualityGrade;
   pricePerKg: number;
   previousPrice: number;
   isActive: boolean;
   lastUpdated: string;
-  updatedBy: string;
   notes?: string;
   region?: string;
 }
@@ -101,19 +98,17 @@ interface GradeDefinition {
 }
 
 interface PriceFormFieldsProps {
-  formVariety: PaddyVariety;
+  formVariety: RiceVariety;
   formGrade: QualityGrade;
   formPrice: string;
   formNotes: string;
-  formRegion?: string;
-  onVarietyChange: (value: PaddyVariety) => void;
+  onVarietyChange: (value: RiceVariety) => void;
   onGradeChange: (value: QualityGrade) => void;
   onPriceChange: (value: string) => void;
   onNotesChange: (value: string) => void;
-  onRegionChange?: (value: string) => void;
 }
 
-// ─── Dummy data ────────────────────────────────────────────────
+// ─── Pricing constants ─────────────────────────────────────────
 const gradeDefinitions: GradeDefinition[] = [
   {
     grade: "A",
@@ -149,14 +144,7 @@ const gradeDefinitions: GradeDefinition[] = [
   },
 ];
 
-const paddyVarieties: PaddyVariety[] = [
-  "Samba",
-  "Nadu",
-  "Red Raw",
-  "White Raw",
-  "Basmathi",
-  "Keeri Samba",
-];
+const paddyVarieties: RiceVariety[] = [...RICE_VARIETIES];
 
 const regions = [
   "Colombo",
@@ -167,8 +155,8 @@ const regions = [
   "Hambantota",
 ];
 
-const isPaddyVariety = (value: string): value is PaddyVariety =>
-  paddyVarieties.includes(value as PaddyVariety);
+const isPaddyVariety = (value: string): value is RiceVariety =>
+  normalizeRiceVariety(value) !== null;
 
 const isQualityGrade = (value: string): value is QualityGrade =>
   gradeDefinitions.some((grade) => grade.grade === value);
@@ -216,31 +204,12 @@ const PriceFormFields = ({
   formGrade,
   formPrice,
   formNotes,
-  formRegion,
   onVarietyChange,
   onGradeChange,
   onPriceChange,
   onNotesChange,
-  onRegionChange,
 }: PriceFormFieldsProps) => (
   <div className="space-y-4">
-    {formRegion !== undefined && onRegionChange && (
-      <div className="space-y-2">
-        <Label>Region</Label>
-        <Select value={formRegion} onValueChange={onRegionChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select region" />
-          </SelectTrigger>
-          <SelectContent>
-            {regions.map((r) => (
-              <SelectItem key={r} value={r}>
-                {r}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    )}
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
         <Label>Paddy Variety</Label>
@@ -288,7 +257,7 @@ const PriceFormFields = ({
       </div>
     </div>
     <div className="space-y-2">
-      <Label>Price per kg (LKR)</Label>
+      <Label>Price per kg (Rs)</Label>
       <Input
         type="number"
         placeholder="e.g. 105"
@@ -328,7 +297,7 @@ function mapPricingToEntry(p: {
     typeof p._id === "string" ? p._id : (p._id?.toString?.() ?? String(p._id));
   return {
     id,
-    variety: p.variety as PaddyVariety,
+    variety: normalizeRiceVariety(p.variety) ?? paddyVarieties[0],
     grade,
     pricePerKg: p.pricePerKg,
     previousPrice: p.pricePerKg,
@@ -336,7 +305,6 @@ function mapPricingToEntry(p: {
     lastUpdated: p.updatedAt
       ? new Date(p.updatedAt).toLocaleString()
       : new Date().toLocaleString(),
-    updatedBy: "You",
     notes: p.notes,
     region: p.region,
   };
@@ -352,7 +320,9 @@ const PriceManagementPage = () => {
   const [filterVariety, setFilterVariety] = useState<string>("all");
   const [filterGrade, setFilterGrade] = useState<string>("all");
 
-  const [formVariety, setFormVariety] = useState<PaddyVariety>("Samba");
+  const [formVariety, setFormVariety] = useState<RiceVariety>(
+    paddyVarieties[0],
+  );
   const [formGrade, setFormGrade] = useState<QualityGrade>("A");
   const [formPrice, setFormPrice] = useState("");
   const [formNotes, setFormNotes] = useState("");
@@ -396,7 +366,7 @@ const PriceManagementPage = () => {
   }, []);
 
   const resetForm = () => {
-    setFormVariety("Samba");
+    setFormVariety(paddyVarieties[0]);
     setFormGrade("A");
     setFormPrice("");
     setFormNotes("");
@@ -442,7 +412,8 @@ const PriceManagementPage = () => {
     if (result.field) {
       const newEntry: PriceEntry = {
         id: result.field._id.toString(),
-        variety: result.field.variety as PaddyVariety,
+        variety:
+          normalizeRiceVariety(result.field.variety) ?? paddyVarieties[0],
         grade: result.field.qualityGrade.replace("Grade ", "") as QualityGrade,
         pricePerKg: result.field.pricePerKg,
         previousPrice: result.field.pricePerKg,
@@ -450,7 +421,6 @@ const PriceManagementPage = () => {
         lastUpdated: result.field.updatedAt
           ? new Date(result.field.updatedAt).toLocaleString()
           : new Date().toLocaleString(),
-        updatedBy: "You",
         notes: result.field.notes,
         region: result.field.region,
       };
@@ -577,19 +547,19 @@ const PriceManagementPage = () => {
     },
     {
       label: "Avg Price/kg",
-      value: `LKR ${avgPrice}`,
+      value: `Rs ${avgPrice}`,
       icon: BarChart3,
       color: "text-accent",
     },
     {
       label: "Highest Price",
-      value: `LKR ${highestPrice}`,
+      value: `Rs ${highestPrice}`,
       icon: TrendingUp,
       color: "text-success",
     },
     {
       label: "Lowest Price",
-      value: `LKR ${lowestPrice}`,
+      value: `Rs ${lowestPrice}`,
       icon: TrendingDown,
       color: "text-warning",
     },
@@ -793,7 +763,7 @@ const PriceManagementPage = () => {
                             </TableCell>
                             <TableCell>
                               <span className="text-lg font-bold text-foreground">
-                                LKR {price.pricePerKg.toFixed(0)}
+                                Rs {price.pricePerKg.toFixed(0)}
                               </span>
                             </TableCell>
                             <TableCell>
@@ -981,7 +951,7 @@ const PriceManagementPage = () => {
                                   )}
                                 </div>
                                 <p className="text-2xl font-bold text-foreground">
-                                  LKR {p.pricePerKg}
+                                  Rs {p.pricePerKg}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-1">
                                   per kg
@@ -1030,7 +1000,7 @@ const PriceManagementPage = () => {
               <DialogDescription>
                 Current price:{" "}
                 <span className="font-semibold text-foreground">
-                  LKR {editingPrice?.pricePerKg}/kg
+                  Rs {editingPrice?.pricePerKg}/kg
                 </span>
               </DialogDescription>
             </DialogHeader>

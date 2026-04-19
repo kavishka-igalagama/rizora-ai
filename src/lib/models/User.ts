@@ -12,6 +12,11 @@ export interface IUser extends Document {
   millName?: string;
   registrationNumber?: string;
   address?: string;
+  officerId?: string;
+  designation?: string;
+  department?: string;
+  assignedDistrict?: string;
+  assignedDivision?: string;
   onboardingCompleted?: boolean;
   imageUrl?: string;
   createdAt: Date;
@@ -61,6 +66,21 @@ const UserSchema: Schema<IUser> = new Schema(
     address: {
       type: String,
     },
+    officerId: {
+      type: String,
+    },
+    designation: {
+      type: String,
+    },
+    department: {
+      type: String,
+    },
+    assignedDistrict: {
+      type: String,
+    },
+    assignedDivision: {
+      type: String,
+    },
     onboardingCompleted: {
       type: Boolean,
       default: false,
@@ -71,7 +91,7 @@ const UserSchema: Schema<IUser> = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const User: Model<IUser> =
