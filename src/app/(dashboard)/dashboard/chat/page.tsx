@@ -2,6 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ChatList from "@/components/dashboard/common/chat/ChatList";
 import ChatContent, {
   type ChatMessage,
@@ -65,7 +66,9 @@ function sortContactsByActivity(contacts: ChatContact[]): ChatContact[] {
 
 const Messages = () => {
   const { user, isLoaded } = useUser();
+  const searchParams = useSearchParams();
   const currentUserId = user?.id;
+  const requestedContactId = searchParams.get("contactId")?.trim() || null;
 
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(
@@ -80,6 +83,24 @@ const Messages = () => {
   const [typingByContact, setTypingByContact] = useState<
     Record<string, boolean>
   >({});
+
+  const visibleContacts = useMemo(() => {
+    if (!requestedContactId) {
+      return contacts;
+    }
+
+    return contacts.filter((contact) => contact.clerkId === requestedContactId);
+  }, [contacts, requestedContactId]);
+
+  const conversationContacts = useMemo(() => {
+    if (requestedContactId) {
+      return visibleContacts;
+    }
+
+    return visibleContacts.filter(
+      (contact) => Boolean(contact.lastMessageAt) || contact.unreadCount > 0,
+    );
+  }, [requestedContactId, visibleContacts]);
 
   const typingResetTimersRef = useRef<
     Record<string, ReturnType<typeof setTimeout>>
@@ -96,8 +117,10 @@ const Messages = () => {
 
   const selectedContact = useMemo(
     () =>
-      contacts.find((contact) => contact.clerkId === selectedContactId) || null,
-    [contacts, selectedContactId],
+      conversationContacts.find(
+        (contact) => contact.clerkId === selectedContactId,
+      ) || null,
+    [conversationContacts, selectedContactId],
   );
 
   const selectedMessages = useMemo(
@@ -261,6 +284,15 @@ const Messages = () => {
 
       setSelectedContactId((current) => {
         if (
+          requestedContactId &&
+          data.contacts.some(
+            (contact) => contact.clerkId === requestedContactId,
+          )
+        ) {
+          return requestedContactId;
+        }
+
+        if (
           current &&
           data.contacts.some((contact) => contact.clerkId === current)
         ) {
@@ -275,7 +307,7 @@ const Messages = () => {
     } finally {
       setIsLoadingContacts(false);
     }
-  }, [currentUserId]);
+  }, [currentUserId, requestedContactId]);
 
   const fetchMessages = useCallback(
     async (contactId: string) => {
@@ -407,6 +439,38 @@ const Messages = () => {
   }, [currentUserId, fetchContacts, isLoaded]);
 
   useEffect(() => {
+    if (!requestedContactId) {
+      return;
+    }
+
+    if (
+      !visibleContacts.some((contact) => contact.clerkId === requestedContactId)
+    ) {
+      return;
+    }
+
+    setSelectedContactId((current) =>
+      current === requestedContactId ? current : requestedContactId,
+    );
+  }, [requestedContactId, visibleContacts]);
+
+  useEffect(() => {
+    if (!selectedContactId) {
+      return;
+    }
+
+    if (
+      conversationContacts.some(
+        (contact) => contact.clerkId === selectedContactId,
+      )
+    ) {
+      return;
+    }
+
+    setSelectedContactId(null);
+  }, [conversationContacts, selectedContactId]);
+
+  useEffect(() => {
     if (!selectedContactId || messagesByContact[selectedContactId]) {
       return;
     }
@@ -529,7 +593,7 @@ const Messages = () => {
         <div className="mx-auto h-full min-h-0 flex flex-col w-full overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
             <ChatList
-              contacts={contacts}
+              contacts={conversationContacts}
               selectedContactId={selectedContactId}
               onSelectContact={setSelectedContactId}
               isLoading={isLoadingContacts}

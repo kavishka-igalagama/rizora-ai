@@ -372,6 +372,7 @@ const MarketPrices = () => {
           .sort((a, b) => b - a)[0];
 
         return {
+          millId: first.millId,
           mill: first.millName,
           location: first.region,
           district: first.millDistrict,
@@ -879,7 +880,12 @@ const MarketPrices = () => {
                               : "Call"}
                           </Button>
                           <Button size="sm" className="flex-1 gap-1" asChild>
-                            <Link href="/messages">
+                            <Link
+                              href={{
+                                pathname: "/dashboard/chat",
+                                query: { contactId: mill.millId },
+                              }}
+                            >
                               <MessageSquare className="w-3 h-3" />
                               Message
                             </Link>
