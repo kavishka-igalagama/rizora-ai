@@ -14,7 +14,7 @@ import { MessageSquare } from "lucide-react";
 type ChatContact = {
   clerkId: string;
   name: string;
-  role: "farmer" | "mill";
+  role: "farmer" | "mill" | "officer";
   district?: string;
   imageUrl?: string;
   lastMessage?: string;
@@ -98,7 +98,10 @@ const Messages = () => {
     }
 
     return visibleContacts.filter(
-      (contact) => Boolean(contact.lastMessageAt) || contact.unreadCount > 0,
+      (contact) =>
+        contact.role === "officer" ||
+        Boolean(contact.lastMessageAt) ||
+        contact.unreadCount > 0,
     );
   }, [requestedContactId, visibleContacts]);
 

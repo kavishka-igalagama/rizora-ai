@@ -7,7 +7,7 @@ import { getConversationId } from "@/lib/chat";
 type ContactResponse = {
   clerkId: string;
   name: string;
-  role: "farmer" | "mill";
+  role: "farmer" | "mill" | "officer";
   district?: string;
   millName?: string;
   imageUrl?: string;
@@ -26,23 +26,54 @@ export async function GET() {
   await connectDB();
 
   const me = await User.findOne({ clerkId: userId })
-    .select("clerkId role")
+    .select("clerkId role district assignedDistrict")
     .lean<{
       clerkId: string;
       role?: "farmer" | "mill" | "officer" | "none";
+      district?: string;
+      assignedDistrict?: string;
     } | null>();
 
   if (!me) {
     return new Response("User not found", { status: 404 });
   }
 
-  if (me.role !== "farmer" && me.role !== "mill") {
+  if (me.role !== "farmer" && me.role !== "mill" && me.role !== "officer") {
     return Response.json({ contacts: [] as ContactResponse[] });
   }
 
-  const oppositeRole = me.role === "farmer" ? "mill" : "farmer";
-  const contacts = await User.find({ role: oppositeRole })
-    .select("clerkId firstName lastName district millName imageUrl role")
+  const myDistrict = (me.district || me.assignedDistrict || "").trim();
+
+  let contactFilter: Record<string, unknown>;
+  if (me.role === "farmer") {
+    const officerDistrictFilter = myDistrict
+      ? {
+          $or: [{ assignedDistrict: myDistrict }, { district: myDistrict }],
+        }
+      : {
+          _id: null,
+        };
+
+    contactFilter = {
+      $or: [{ role: "mill" }, { role: "officer", ...officerDistrictFilter }],
+    };
+  } else if (me.role === "mill") {
+    contactFilter = { role: "farmer" };
+  } else {
+    contactFilter = myDistrict
+      ? {
+          role: "farmer",
+          district: myDistrict,
+        }
+      : {
+          _id: null,
+        };
+  }
+
+  const contacts = await User.find(contactFilter)
+    .select(
+      "clerkId firstName lastName district assignedDistrict millName imageUrl role",
+    )
     .lean<
       {
         clerkId: string;
@@ -51,7 +82,8 @@ export async function GET() {
         district?: string;
         millName?: string;
         imageUrl?: string;
-        role?: "farmer" | "mill";
+        assignedDistrict?: string;
+        role?: "farmer" | "mill" | "officer";
       }[]
     >();
 
@@ -68,14 +100,17 @@ export async function GET() {
           ? contact.millName ||
             `${contact.firstName || ""} ${contact.lastName || ""}`.trim() ||
             "Mill"
-          : `${contact.firstName || ""} ${contact.lastName || ""}`.trim() ||
-            "Farmer";
+          : contact.role === "officer"
+            ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() ||
+              "District Officer"
+            : `${contact.firstName || ""} ${contact.lastName || ""}`.trim() ||
+              "Farmer";
 
       return {
         clerkId: contact.clerkId,
         name,
-        role: (contact.role || oppositeRole) as "farmer" | "mill",
-        district: contact.district,
+        role: (contact.role || "farmer") as "farmer" | "mill" | "officer",
+        district: contact.assignedDistrict || contact.district,
         millName: contact.millName,
         imageUrl: contact.imageUrl,
         lastMessage: lastMessage?.body,

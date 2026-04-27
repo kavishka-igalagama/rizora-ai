@@ -10,6 +10,23 @@ import { getConversationId } from "@/lib/chat";
 
 const TYPING_EVENT_NAME = "typing";
 
+type ChatRole = "farmer" | "mill" | "officer";
+
+function toChatRole(role?: string): ChatRole | null {
+  if (role === "farmer" || role === "mill" || role === "officer") {
+    return role;
+  }
+  return null;
+}
+
+function isAllowedChatPair(roleA: ChatRole, roleB: ChatRole): boolean {
+  return (
+    (roleA === "farmer" && (roleB === "mill" || roleB === "officer")) ||
+    (roleA === "mill" && roleB === "farmer") ||
+    (roleA === "officer" && roleB === "farmer")
+  );
+}
+
 export async function POST(req: Request) {
   const { userId } = await auth();
 
@@ -43,13 +60,11 @@ export async function POST(req: Request) {
     return new Response("User not found", { status: 404 });
   }
 
-  const validRoles = new Set(["farmer", "mill"]);
-  if (!validRoles.has(me.role || "") || !validRoles.has(contact.role || "")) {
-    return new Response("Only farmer and mill users can chat", { status: 403 });
-  }
+  const myRole = toChatRole(me.role);
+  const contactRole = toChatRole(contact.role);
 
-  if (me.role === contact.role) {
-    return new Response("Farmer can only chat with mill and vice versa", {
+  if (!myRole || !contactRole || !isAllowedChatPair(myRole, contactRole)) {
+    return new Response("You are not allowed to chat with this user", {
       status: 403,
     });
   }
