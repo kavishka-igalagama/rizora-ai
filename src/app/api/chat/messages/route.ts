@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import Message from "@/lib/models/Message";
+import Notification from "@/lib/models/Notification";
 import User from "@/lib/models/User";
 import {
   getMissingPusherEnvVars,
@@ -163,6 +164,34 @@ export async function POST(req: Request) {
     createdAt: created.createdAt.toISOString(),
     readAt: created.readAt ? created.readAt.toISOString() : null,
   };
+
+  if (userId !== contactId) {
+    try {
+      const notification = await Notification.create({
+        clerkId: contactId,
+        type: "message",
+        title: "New chat message",
+        description: created.body,
+      });
+
+      if (isPusherConfigured()) {
+        await pusherServer.trigger(
+          `private-user-${contactId}`,
+          "notification:new",
+          {
+            id: notification._id.toString(),
+            type: notification.type,
+            title: notification.title,
+            description: notification.description,
+            read: notification.read,
+            createdAt: notification.createdAt.toISOString(),
+          },
+        );
+      }
+    } catch (notifyError) {
+      console.error("[chat] Failed to create notification", notifyError);
+    }
+  }
 
   if (!isPusherConfigured()) {
     console.warn(

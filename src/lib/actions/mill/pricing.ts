@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import Pricing, { IPricing } from "@/lib/models/Pricing";
 import { getCurrentUserDistrict } from "@/lib/auth";
+import { notifyFarmersForDistrictAverageChange } from "@/lib/market-price-notifications";
 import { publishMarketPricesUpdate } from "@/lib/market-prices-realtime";
 import { normalizeRiceVariety } from "@/lib/rice-varieties";
 
@@ -72,6 +73,19 @@ export async function addNewPricing(
       millId: pricing.millId,
       updatedAt: pricing.updatedAt.toISOString(),
     });
+
+    try {
+      const district = await getCurrentUserDistrict();
+      if (district) {
+        await notifyFarmersForDistrictAverageChange({
+          district,
+          action: "created",
+          currentPricing: pricing,
+        });
+      }
+    } catch (error) {
+      console.error("[market-prices] Failed to notify farmers", error);
+    }
 
     return {
       success: true,
@@ -150,6 +164,11 @@ export async function updatePricing(
       ...(normalizedVariety ? { variety: normalizedVariety } : {}),
     };
 
+    const existing = await Pricing.findOne({ _id: id, millId: userId }).lean();
+    if (!existing) {
+      return { success: false, error: "Pricing not found or access denied" };
+    }
+
     const pricing = await Pricing.findOneAndUpdate(
       { _id: id, millId: userId },
       { $set: updates },
@@ -165,6 +184,20 @@ export async function updatePricing(
       millId: pricing.millId,
       updatedAt: pricing.updatedAt.toISOString(),
     });
+
+    try {
+      const district = await getCurrentUserDistrict();
+      if (district) {
+        await notifyFarmersForDistrictAverageChange({
+          district,
+          action: "updated",
+          previousPricing: existing,
+          currentPricing: pricing,
+        });
+      }
+    } catch (error) {
+      console.error("[market-prices] Failed to notify farmers", error);
+    }
 
     return {
       success: true,
@@ -204,6 +237,19 @@ export async function deletePricing(
       millId: result.millId,
       updatedAt: new Date().toISOString(),
     });
+
+    try {
+      const district = await getCurrentUserDistrict();
+      if (district) {
+        await notifyFarmersForDistrictAverageChange({
+          district,
+          action: "deleted",
+          previousPricing: result,
+        });
+      }
+    } catch (error) {
+      console.error("[market-prices] Failed to notify farmers", error);
+    }
 
     return { success: true };
   } catch (error: unknown) {

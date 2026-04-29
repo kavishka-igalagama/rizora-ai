@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,74 +18,136 @@ import {
   BellOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPusherClient } from "@/lib/pusher-client";
 
 interface Notification {
   id: string;
   type: "alert" | "market" | "message" | "system";
   title: string;
   description: string;
-  time: string;
   read: boolean;
+  createdAt: string;
+  metadata?: {
+    scanId?: string;
+    disease?: string;
+    confidence?: number;
+    imageUrl?: string;
+  };
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "alert",
-    title: "Disease Alert: Bacterial Leaf Blight",
-    description:
-      "High risk detected in your Kandy district. Take preventive measures.",
-    time: "5 minutes ago",
-    read: false,
-  },
-  {
-    id: "2",
-    type: "market",
-    title: "Rice Price Update",
-    description: "Nadu rice prices increased by 8% in Colombo market.",
-    time: "1 hour ago",
-    read: false,
-  },
-  {
-    id: "3",
-    type: "message",
-    title: "New Message from Agricultural Officer",
-    description: "Your farm inspection has been scheduled for next week.",
-    time: "2 hours ago",
-    read: false,
-  },
-  {
-    id: "4",
-    type: "system",
-    title: "Scan Report Ready",
-    description: "Your disease detection scan from yesterday is now available.",
-    time: "5 hours ago",
-    read: true,
-  },
-  {
-    id: "5",
-    type: "alert",
-    title: "Weather Warning",
-    description: "Heavy rainfall expected in your area for the next 3 days.",
-    time: "1 day ago",
-    read: true,
-  },
-  {
-    id: "6",
-    type: "market",
-    title: "New Buyer Request",
-    description: "A rice mill in Kurunegala is interested in your harvest.",
-    time: "2 days ago",
-    read: true,
-  },
-];
+type NotificationsUpdatedEvent = {
+  unreadCount?: number;
+};
+
+const formatRelativeTime = (timestamp: string) => {
+  const created = new Date(timestamp).getTime();
+  if (Number.isNaN(created)) {
+    return "just now";
+  }
+
+  const seconds = Math.max(0, Math.floor((Date.now() - created) / 1000));
+  if (seconds < 60) {
+    return "just now";
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} min${minutes === 1 ? "" : "s"} ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) {
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+
+  return new Date(created).toLocaleDateString();
+};
 
 const Notifications = () => {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(mockNotifications);
+  const { user } = useUser();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const loadNotifications = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = (await response.json()) as
+        | { notifications: Notification[]; unreadCount: number }
+        | { error?: string };
+
+      if (!response.ok || !("notifications" in data)) {
+        const apiError = "error" in data ? data.error : undefined;
+        throw new Error(apiError || "Failed to load notifications.");
+      }
+
+      setNotifications(data.notifications);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to load notifications.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const pusher = getPusherClient();
+    const channelName = `private-user-${user.id}`;
+    const channel = pusher.subscribe(channelName);
+
+    const handleNewNotification = (payload: Notification) => {
+      setNotifications((prev) => [payload, ...prev]);
+    };
+
+    const handleNotificationsUpdated = (
+      _payload: NotificationsUpdatedEvent,
+    ) => {
+      void loadNotifications();
+    };
+
+    channel.bind("notification:new", handleNewNotification);
+    channel.bind("notification:updated", handleNotificationsUpdated);
+
+    return () => {
+      channel.unbind("notification:new", handleNewNotification);
+      channel.unbind("notification:updated", handleNotificationsUpdated);
+      pusher.unsubscribe(channelName);
+    };
+  }, [loadNotifications, user?.id]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("notifications-unread-count-changed", {
+        detail: { total: unreadCount },
+      }),
+    );
+  }, [unreadCount]);
 
   const getIcon = (type: Notification["type"]) => {
     switch (type) {
@@ -112,18 +175,79 @@ const Notifications = () => {
     }
   };
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    const target = notifications.find((notification) => notification.id === id);
+    if (!target || target.read) {
+      return;
+    }
+
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+      prev.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification,
+      ),
     );
+
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to mark notification as read.");
+      }
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
+      void loadNotifications();
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    if (!notifications.some((notification) => !notification.read)) {
+      return;
+    }
+
+    setNotifications((prev) =>
+      prev.map((notification) => ({ ...notification, read: true })),
+    );
+
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to mark notifications as read.");
+      }
+    } catch (error) {
+      console.error("Failed to mark notifications as read", error);
+      void loadNotifications();
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    setNotifications((prev) =>
+      prev.filter((notification) => notification.id !== id),
+    );
+
+    try {
+      const response = await fetch(
+        `/api/notifications?id=${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete notification.");
+      }
+    } catch (error) {
+      console.error("Failed to delete notification", error);
+      void loadNotifications();
+    }
   };
 
   const filteredNotifications = notifications.filter((n) => {
@@ -173,7 +297,23 @@ const Notifications = () => {
             </TabsList>
 
             <TabsContent value={activeTab} className="mt-6">
-              {filteredNotifications.length === 0 ? (
+              {isLoading ? (
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <span className="text-sm text-muted-foreground">
+                      Loading notifications...
+                    </span>
+                  </CardContent>
+                </Card>
+              ) : errorMessage ? (
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <span className="text-sm text-destructive">
+                      {errorMessage}
+                    </span>
+                  </CardContent>
+                </Card>
+              ) : filteredNotifications.length === 0 ? (
                 <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <BellOff className="w-12 h-12 text-muted-foreground mb-4" />
@@ -191,10 +331,9 @@ const Notifications = () => {
                     <Card
                       key={notification.id}
                       className={cn(
-                        "transition-all hover:shadow-md cursor-pointer",
+                        "transition-all hover:shadow-md",
                         !notification.read && "border-primary/50 bg-primary/5",
                       )}
-                      onClick={() => markAsRead(notification.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-4">
@@ -221,20 +360,31 @@ const Notifications = () => {
                             </p>
                             <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                               <Clock className="w-3 h-3" />
-                              {notification.time}
+                              {formatRelativeTime(notification.createdAt)}
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0 text-muted-foreground hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {!notification.read && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-primary"
+                                onClick={() => markAsRead(notification.id)}
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() =>
+                                deleteNotification(notification.id)
+                              }
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
