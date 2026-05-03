@@ -307,6 +307,28 @@ const DiseaseDetection = () => {
     }
   };
 
+  const refreshNotificationsCount = async () => {
+    try {
+      const response = await fetch("/api/notifications?countOnly=true", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as { unreadCount?: number };
+      window.dispatchEvent(
+        new CustomEvent("notifications-unread-count-changed", {
+          detail: { total: data.unreadCount || 0 },
+        }),
+      );
+    } catch {
+      // Ignore notification count refresh errors.
+    }
+  };
+
   useEffect(() => {
     void loadScanHistory();
   }, []);
@@ -447,6 +469,7 @@ const DiseaseDetection = () => {
         treatmentSuggestions: data.treatmentSuggestions,
       });
       void loadScanHistory();
+      void refreshNotificationsCount();
     } catch (error) {
       setDetectionResult(null);
       setErrorMessage(

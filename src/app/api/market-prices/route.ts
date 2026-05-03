@@ -2,8 +2,15 @@ import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import Pricing from "@/lib/models/Pricing";
 import User from "@/lib/models/User";
+import Notification from "@/lib/models/Notification";
+import { notifyFarmersForDistrictAverageChange } from "@/lib/market-price-notifications";
 import { publishMarketPricesUpdate } from "@/lib/market-prices-realtime";
 import { normalizeRiceVariety } from "@/lib/rice-varieties";
+import {
+  getMissingPusherEnvVars,
+  isPusherConfigured,
+  default as pusherServer,
+} from "@/lib/pusher-server";
 
 type KnownRole = "farmer" | "mill" | "officer" | "none";
 
@@ -19,6 +26,10 @@ type PriceDoc = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+type MarketNotificationAction = "created" | "updated" | "deleted";
+
+const NOTIFICATION_EVENT_NEW = "notification:new";
 
 const toQualityGrade = (
   value: string,
@@ -49,6 +60,86 @@ async function getRequester() {
 
 function isCanWrite(role: KnownRole | null): role is "mill" | "officer" {
   return role === "mill" || role === "officer";
+}
+
+async function notifyFarmersForMarketUpdate(
+  pricing: PriceDoc,
+  action: MarketNotificationAction,
+): Promise<string | null> {
+  const mill = await User.findOne({ clerkId: pricing.millId })
+    .select("district millName firstName lastName")
+    .lean<{
+      district?: string;
+      millName?: string;
+      firstName?: string;
+      lastName?: string;
+    } | null>();
+
+  const district = mill?.district?.trim();
+  if (!district) {
+    return null;
+  }
+
+  const farmers = await User.find({ role: "farmer", district })
+    .select("clerkId")
+    .lean<{ clerkId: string }[]>();
+
+  if (farmers.length === 0) {
+    return district;
+  }
+
+  const millName =
+    mill?.millName ||
+    `${mill?.firstName || ""} ${mill?.lastName || ""}`.trim() ||
+    "a nearby mill";
+
+  const priceLabel = `Rs ${pricing.pricePerKg.toFixed(2)} / kg`;
+  const titleByAction: Record<MarketNotificationAction, string> = {
+    created: `New market price in ${district}`,
+    updated: `Market price updated in ${district}`,
+    deleted: `Market price removed in ${district}`,
+  };
+
+  const descriptionByAction: Record<MarketNotificationAction, string> = {
+    created: `${pricing.variety} (${pricing.qualityGrade}) at ${millName}: ${priceLabel}.`,
+    updated: `${pricing.variety} (${pricing.qualityGrade}) at ${millName}: ${priceLabel}.`,
+    deleted: `${pricing.variety} (${pricing.qualityGrade}) was removed at ${millName}.`,
+  };
+
+  const notifications = farmers.map((farmer) => ({
+    clerkId: farmer.clerkId,
+    type: "market" as const,
+    title: titleByAction[action],
+    description: descriptionByAction[action],
+  }));
+
+  const created = await Notification.insertMany(notifications);
+
+  if (!isPusherConfigured()) {
+    console.warn(
+      `[market-prices] Pusher is not configured. Missing env vars: ${getMissingPusherEnvVars().join(", ")}`,
+    );
+    return district;
+  }
+
+  await Promise.all(
+    created.map((notification) =>
+      pusherServer.trigger(
+        `private-user-${notification.clerkId}`,
+        NOTIFICATION_EVENT_NEW,
+        {
+          id: notification._id.toString(),
+          type: notification.type,
+          title: notification.title,
+          description: notification.description,
+          read: notification.read,
+          createdAt: notification.createdAt.toISOString(),
+        },
+      ),
+    ),
+  );
+
+  return district;
 }
 
 export async function GET(req: Request) {
@@ -212,6 +303,19 @@ export async function POST(req: Request) {
     updatedAt: created.updatedAt.toISOString(),
   });
 
+  try {
+    const district = await notifyFarmersForMarketUpdate(created, "created");
+    if (district) {
+      await notifyFarmersForDistrictAverageChange({
+        district,
+        action: "created",
+        currentPricing: created,
+      });
+    }
+  } catch (error) {
+    console.error("[market-prices] Failed to notify farmers", error);
+  }
+
   return Response.json(
     {
       id: created._id.toString(),
@@ -292,6 +396,11 @@ export async function PATCH(req: Request) {
     requester.role === "officer"
       ? { _id: id }
       : { _id: id, millId: requester.userId };
+  const existing = await Pricing.findOne(scope).lean<PriceDoc | null>();
+  if (!existing) {
+    return new Response("Pricing not found or access denied", { status: 404 });
+  }
+
   const updated = await Pricing.findOneAndUpdate(
     scope,
     { $set: updates },
@@ -308,6 +417,20 @@ export async function PATCH(req: Request) {
     millId: updated.millId,
     updatedAt: updated.updatedAt.toISOString(),
   });
+
+  try {
+    const district = await notifyFarmersForMarketUpdate(updated, "updated");
+    if (district) {
+      await notifyFarmersForDistrictAverageChange({
+        district,
+        action: "updated",
+        previousPricing: existing,
+        currentPricing: updated,
+      });
+    }
+  } catch (error) {
+    console.error("[market-prices] Failed to notify farmers", error);
+  }
 
   return Response.json({
     id: updated._id.toString(),
@@ -356,6 +479,19 @@ export async function DELETE(req: Request) {
     millId: deleted.millId,
     updatedAt: new Date().toISOString(),
   });
+
+  try {
+    const district = await notifyFarmersForMarketUpdate(deleted, "deleted");
+    if (district) {
+      await notifyFarmersForDistrictAverageChange({
+        district,
+        action: "deleted",
+        previousPricing: deleted,
+      });
+    }
+  } catch (error) {
+    console.error("[market-prices] Failed to notify farmers", error);
+  }
 
   return Response.json({ success: true });
 }

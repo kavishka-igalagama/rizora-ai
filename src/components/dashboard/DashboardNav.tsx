@@ -41,6 +41,10 @@ type ChatMessageEvent = {
   recipientId?: string;
 };
 
+type NotificationsUpdatedEvent = {
+  unreadCount?: number;
+};
+
 export default function DashboardNav({
   role,
   userName,
@@ -51,6 +55,7 @@ export default function DashboardNav({
   const { signOut } = useClerk();
   const { user, isLoaded } = useUser();
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
 
   const canUseChat = role === "farmer" || role === "mill";
 
@@ -85,13 +90,37 @@ export default function DashboardNav({
     }
   }, [canUseChat, user?.id]);
 
+  const fetchNotificationsUnreadCount = useCallback(async () => {
+    if (!user?.id) {
+      setNotificationsUnreadCount(0);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/notifications?countOnly=true", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch notifications unread count");
+      }
+
+      const data = (await response.json()) as { unreadCount?: number };
+      setNotificationsUnreadCount(data.unreadCount || 0);
+    } catch (error) {
+      console.error("Failed to fetch sidebar notifications count", error);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (!isLoaded) {
       return;
     }
 
     void fetchChatUnreadCount();
-  }, [fetchChatUnreadCount, isLoaded]);
+    void fetchNotificationsUnreadCount();
+  }, [fetchChatUnreadCount, fetchNotificationsUnreadCount, isLoaded]);
 
   useEffect(() => {
     if (!pathname.startsWith("/dashboard/chat")) {
@@ -103,7 +132,15 @@ export default function DashboardNav({
   }, [fetchChatUnreadCount, pathname]);
 
   useEffect(() => {
-    if (!canUseChat || !user?.id) {
+    if (!pathname.startsWith("/dashboard/notifications")) {
+      return;
+    }
+
+    void fetchNotificationsUnreadCount();
+  }, [fetchNotificationsUnreadCount, pathname]);
+
+  useEffect(() => {
+    if (!user?.id) {
       return;
     }
 
@@ -126,15 +163,44 @@ export default function DashboardNav({
       }, 250);
     };
 
-    channel.bind("new-message", handleNewMessage);
-    channel.bind("messages-read", refreshUnreadCount);
+    const handleNewNotification = () => {
+      setNotificationsUnreadCount((prev) => prev + 1);
+      setTimeout(() => {
+        void fetchNotificationsUnreadCount();
+      }, 250);
+    };
+
+    const handleNotificationsUpdated = (payload: NotificationsUpdatedEvent) => {
+      if (typeof payload.unreadCount === "number") {
+        setNotificationsUnreadCount(payload.unreadCount);
+        return;
+      }
+
+      void fetchNotificationsUnreadCount();
+    };
+
+    if (canUseChat) {
+      channel.bind("new-message", handleNewMessage);
+      channel.bind("messages-read", refreshUnreadCount);
+    }
+    channel.bind("notification:new", handleNewNotification);
+    channel.bind("notification:updated", handleNotificationsUpdated);
 
     return () => {
-      channel.unbind("new-message", handleNewMessage);
-      channel.unbind("messages-read", refreshUnreadCount);
+      if (canUseChat) {
+        channel.unbind("new-message", handleNewMessage);
+        channel.unbind("messages-read", refreshUnreadCount);
+      }
+      channel.unbind("notification:new", handleNewNotification);
+      channel.unbind("notification:updated", handleNotificationsUpdated);
       pusher.unsubscribe(channelName);
     };
-  }, [canUseChat, fetchChatUnreadCount, user?.id]);
+  }, [
+    canUseChat,
+    fetchChatUnreadCount,
+    fetchNotificationsUnreadCount,
+    user?.id,
+  ]);
 
   useEffect(() => {
     const handleUnreadCountChanged = (event: Event) => {
@@ -150,6 +216,25 @@ export default function DashboardNav({
     return () => {
       window.removeEventListener(
         "chat-unread-count-changed",
+        handleUnreadCountChanged,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleUnreadCountChanged = (event: Event) => {
+      const customEvent = event as CustomEvent<{ total?: number }>;
+      setNotificationsUnreadCount(customEvent.detail?.total || 0);
+    };
+
+    window.addEventListener(
+      "notifications-unread-count-changed",
+      handleUnreadCountChanged,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "notifications-unread-count-changed",
         handleUnreadCountChanged,
       );
     };
@@ -249,6 +334,10 @@ export default function DashboardNav({
   const getUnreadForLink = (href: string) => {
     if (href === "/dashboard/chat") {
       return chatUnreadCount;
+    }
+
+    if (href === "/dashboard/notifications") {
+      return notificationsUnreadCount;
     }
 
     return 0;

@@ -5,7 +5,13 @@ import {
 } from "@/lib/cloudinary";
 import connectDB from "@/lib/mongodb";
 import DiseaseScan from "@/lib/models/DiseaseScan";
+import Notification from "@/lib/models/Notification";
 import User from "@/lib/models/User";
+import {
+  getMissingPusherEnvVars,
+  isPusherConfigured,
+  default as pusherServer,
+} from "@/lib/pusher-server";
 
 type InferenceResult = {
   disease: string;
@@ -173,6 +179,48 @@ export async function POST(req: Request) {
       imageWidth: uploadedImage.width,
       imageHeight: uploadedImage.height,
     });
+
+    if (userId) {
+      try {
+        const notification = await Notification.create({
+          clerkId: userId,
+          type: "alert",
+          title: "Disease scan completed",
+          description: `${result.disease} detected with ${result.confidence.toFixed(2)}% confidence.`,
+          metadata: {
+            scanId: savedScan._id.toString(),
+            disease: result.disease,
+            confidence: result.confidence,
+            imageUrl: uploadedImage.secureUrl,
+          },
+        });
+
+        if (!isPusherConfigured()) {
+          console.warn(
+            `[disease-detect] Pusher is not configured. Missing env vars: ${getMissingPusherEnvVars().join(", ")}`,
+          );
+        } else {
+          await pusherServer.trigger(
+            `private-user-${userId}`,
+            "notification:new",
+            {
+              id: notification._id.toString(),
+              type: notification.type,
+              title: notification.title,
+              description: notification.description,
+              read: notification.read,
+              createdAt: notification.createdAt.toISOString(),
+              metadata: notification.metadata,
+            },
+          );
+        }
+      } catch (notifyError) {
+        console.error(
+          "[disease-detect] Failed to create notification",
+          notifyError,
+        );
+      }
+    }
 
     return Response.json({
       ...result,

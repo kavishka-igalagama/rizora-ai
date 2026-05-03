@@ -76,6 +76,15 @@ const ChatList = ({
     });
   }, [contacts, query]);
 
+  const groupedContacts = useMemo(() => {
+    return {
+      officers: filteredContacts.filter(
+        (contact) => contact.role === "officer",
+      ),
+      others: filteredContacts.filter((contact) => contact.role !== "officer"),
+    };
+  }, [filteredContacts]);
+
   const totalUnreadCount = contacts.reduce(
     (sum, contact) => sum + (contact.unreadCount || 0),
     0,
@@ -124,69 +133,97 @@ const ChatList = ({
                 No conversations found.
               </p>
             ) : (
-              filteredContacts.map((contact) => {
-                const isActive = selectedContactId === contact.clerkId;
-
+              [
+                ...(groupedContacts.officers.length > 0
+                  ? [
+                      {
+                        title: "Officers from your district",
+                        contacts: groupedContacts.officers,
+                      },
+                    ]
+                  : []),
+                ...(groupedContacts.others.length > 0
+                  ? [
+                      {
+                        title: "Other Conversations",
+                        contacts: groupedContacts.others,
+                      },
+                    ]
+                  : []),
+              ].map((group) => {
                 return (
-                  <button
-                    key={contact.clerkId}
-                    type="button"
-                    onClick={() => onSelectContact(contact.clerkId)}
-                    className={`group relative w-full text-left rounded-2xl cursor-pointer transition-all border px-3 py-3 ${
-                      isActive
-                        ? "border-primary/30 bg-primary/10 shadow-sm"
-                        : "border-transparent bg-background/70 hover:border-border/70 hover:bg-muted/40"
-                    }`}
-                  >
-                    <div
-                      className={`pointer-events-none absolute inset-y-3 left-0 w-1 rounded-r-full transition-opacity ${
-                        isActive ? "bg-primary opacity-100" : "opacity-0"
-                      }`}
-                    />
+                  <div key={group.title} className="space-y-2">
+                    <p className="px-2 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      {group.title}
+                    </p>
+                    {group.contacts.map((contact) => {
+                      const isActive = selectedContactId === contact.clerkId;
 
-                    <div className="flex items-center gap-3">
-                      <div className="relative shrink-0">
-                        <Avatar className="w-12 h-12 ring-2 ring-background shadow-sm">
-                          <AvatarImage src={contact.imageUrl || ""} />
-                          <AvatarFallback className="bg-linear-to-br from-primary to-emerald-600 text-white">
-                            {contact.name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                      return (
+                        <button
+                          key={contact.clerkId}
+                          type="button"
+                          onClick={() => onSelectContact(contact.clerkId)}
+                          className={`group relative w-full text-left rounded-2xl cursor-pointer transition-all border px-3 py-3 ${
+                            isActive
+                              ? "border-primary/30 bg-primary/10 shadow-sm"
+                              : "border-transparent bg-background/70 hover:border-border/70 hover:bg-muted/40"
+                          }`}
+                        >
+                          <div
+                            className={`pointer-events-none absolute inset-y-3 left-0 w-1 rounded-r-full transition-opacity ${
+                              isActive ? "bg-primary opacity-100" : "opacity-0"
+                            }`}
+                          />
 
-                        <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background shadow-sm" />
-                      </div>
+                          <div className="flex items-center gap-3">
+                            <div className="relative shrink-0">
+                              <Avatar className="w-12 h-12 ring-2 ring-background shadow-sm">
+                                <AvatarImage src={contact.imageUrl || ""} />
+                                <AvatarFallback className="bg-linear-to-br from-primary to-emerald-600 text-white">
+                                  {contact.name.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
 
-                      <div className="flex flex-col flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-sm text-foreground truncate tracking-tight">
-                            {contact.name}
-                          </h4>
+                              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background shadow-sm" />
+                            </div>
 
-                          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                            {formatLastMessageTime(contact.lastMessageAt)}
-                          </span>
-                        </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-semibold text-sm text-foreground truncate tracking-tight">
+                                  {contact.name}
+                                </h4>
 
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-xs text-muted-foreground truncate">
-                            {contact.role}
-                            {contact.district ? `, ${contact.district}` : ""}
-                          </p>
-                          {Boolean(contact.unreadCount) && (
-                            <Badge className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px]">
-                              {contact.unreadCount}
-                            </Badge>
-                          )}
-                        </div>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                                  {formatLastMessageTime(contact.lastMessageAt)}
+                                </span>
+                              </div>
 
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm text-muted-foreground/90 truncate">
-                            {contact.lastMessage || "No messages yet"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
+                              <div className="flex items-center justify-between mt-1">
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {contact.role}
+                                  {contact.district
+                                    ? `, ${contact.district}`
+                                    : ""}
+                                </p>
+                                {Boolean(contact.unreadCount) && (
+                                  <Badge className="ml-2 h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px]">
+                                    {contact.unreadCount}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between mt-1">
+                                <p className="text-sm text-muted-foreground/90 truncate">
+                                  {contact.lastMessage || "No messages yet"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 );
               })
             )}

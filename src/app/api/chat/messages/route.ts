@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/lib/mongodb";
 import Message from "@/lib/models/Message";
+import Notification from "@/lib/models/Notification";
 import User from "@/lib/models/User";
 import {
   getMissingPusherEnvVars,
@@ -22,6 +23,23 @@ type MessagePayload = {
   readAt: string | null;
 };
 
+type ChatRole = "farmer" | "mill" | "officer";
+
+function toChatRole(role?: string): ChatRole | null {
+  if (role === "farmer" || role === "mill" || role === "officer") {
+    return role;
+  }
+  return null;
+}
+
+function isAllowedChatPair(roleA: ChatRole, roleB: ChatRole): boolean {
+  return (
+    (roleA === "farmer" && (roleB === "mill" || roleB === "officer")) ||
+    (roleA === "mill" && roleB === "farmer") ||
+    (roleA === "officer" && roleB === "farmer")
+  );
+}
+
 export async function GET(req: Request) {
   const { userId } = await auth();
 
@@ -38,15 +56,28 @@ export async function GET(req: Request) {
 
   await connectDB();
 
-  const contact = await User.findOne({ clerkId: contactId })
-    .select("clerkId role")
-    .lean<{
+  const [me, contact] = await Promise.all([
+    User.findOne({ clerkId: userId }).select("clerkId role").lean<{
       clerkId: string;
       role?: "farmer" | "mill" | "officer" | "none";
-    } | null>();
+    } | null>(),
+    User.findOne({ clerkId: contactId }).select("clerkId role").lean<{
+      clerkId: string;
+      role?: "farmer" | "mill" | "officer" | "none";
+    } | null>(),
+  ]);
 
-  if (!contact || (contact.role !== "farmer" && contact.role !== "mill")) {
+  const myRole = toChatRole(me?.role);
+  const contactRole = toChatRole(contact?.role);
+
+  if (!me || !contact || !myRole || !contactRole) {
     return new Response("Invalid contact", { status: 404 });
+  }
+
+  if (!isAllowedChatPair(myRole, contactRole)) {
+    return new Response("You are not allowed to chat with this user", {
+      status: 403,
+    });
   }
 
   const conversationId = getConversationId(userId, contactId);
@@ -107,13 +138,11 @@ export async function POST(req: Request) {
     return new Response("User not found", { status: 404 });
   }
 
-  const validRoles = new Set(["farmer", "mill"]);
-  if (!validRoles.has(me.role || "") || !validRoles.has(contact.role || "")) {
-    return new Response("Only farmer and mill users can chat", { status: 403 });
-  }
+  const myRole = toChatRole(me.role);
+  const contactRole = toChatRole(contact.role);
 
-  if (me.role === contact.role) {
-    return new Response("Farmer can only chat with mill and vice versa", {
+  if (!myRole || !contactRole || !isAllowedChatPair(myRole, contactRole)) {
+    return new Response("You are not allowed to chat with this user", {
       status: 403,
     });
   }
@@ -135,6 +164,34 @@ export async function POST(req: Request) {
     createdAt: created.createdAt.toISOString(),
     readAt: created.readAt ? created.readAt.toISOString() : null,
   };
+
+  if (userId !== contactId) {
+    try {
+      const notification = await Notification.create({
+        clerkId: contactId,
+        type: "message",
+        title: "New chat message",
+        description: created.body,
+      });
+
+      if (isPusherConfigured()) {
+        await pusherServer.trigger(
+          `private-user-${contactId}`,
+          "notification:new",
+          {
+            id: notification._id.toString(),
+            type: notification.type,
+            title: notification.title,
+            description: notification.description,
+            read: notification.read,
+            createdAt: notification.createdAt.toISOString(),
+          },
+        );
+      }
+    } catch (notifyError) {
+      console.error("[chat] Failed to create notification", notifyError);
+    }
+  }
 
   if (!isPusherConfigured()) {
     console.warn(
@@ -180,11 +237,19 @@ export async function PATCH(req: Request) {
 
   await connectDB();
 
-  const contact = await User.findOne({ clerkId: contactId })
-    .select("role")
-    .lean<{ role?: "farmer" | "mill" | "officer" | "none" } | null>();
+  const [me, contact] = await Promise.all([
+    User.findOne({ clerkId: userId })
+      .select("role")
+      .lean<{ role?: "farmer" | "mill" | "officer" | "none" } | null>(),
+    User.findOne({ clerkId: contactId })
+      .select("role")
+      .lean<{ role?: "farmer" | "mill" | "officer" | "none" } | null>(),
+  ]);
 
-  if (!contact || (contact.role !== "farmer" && contact.role !== "mill")) {
+  const myRole = toChatRole(me?.role);
+  const contactRole = toChatRole(contact?.role);
+
+  if (!myRole || !contactRole || !isAllowedChatPair(myRole, contactRole)) {
     return new Response("Invalid contact", { status: 404 });
   }
 
