@@ -1,40 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rizora AI
 
-## ML Service (FastAPI)
+An AI-powered rice farm management platform that combines disease detection, real-time notifications, and stakeholder coordination to improve cultivation outcomes.
 
-Disease detection now uses a separate FastAPI service.
+## Project Overview
 
-1. Install ML dependencies:
+Rizora AI is a final-year university project focused on modernizing rice cultivation workflows. It blends AI-driven disease detection with a full-stack web app to help farmers, millers, and agricultural officers collaborate around field data, market prices, and harvest operations.
+
+## Key Features
+
+### For Farmers
+
+- AI-powered disease detection for rice leaves
+- Treatment suggestions based on model results
+- Real-time notifications for scan updates
+- Harvest and market price awareness
+
+### For Mills and Officers
+
+- Centralized dashboards for farmer engagement
+- Scan history and case follow-up workflows
+- Market price updates and alerts
+- Real-time messaging and notifications
+
+### AI Capabilities
+
+- CNN-based rice disease classification
+- FastAPI inference service with image processing
+- Historical scan tracking in MongoDB
+
+## Tech Stack
+
+### Frontend
+
+- Next.js (App Router) + React 19
+- Tailwind CSS + Radix UI
+- Clerk authentication
+- Recharts for data visualization
+
+### Backend
+
+- Next.js API routes
+- MongoDB + Mongoose
+- Pusher for realtime events
+- Cloudinary for image storage
+
+### ML Service
+
+- FastAPI + Uvicorn
+- TensorFlow/Keras
+- Pillow + NumPy
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- MongoDB
+- Python 3.9+
+
+### Install Dependencies
 
 ```bash
-pip install -r src/ml-service/requirements.txt
+npm install
 ```
 
-2. Start the FastAPI server:
+### Configure Environment Variables
 
-```bash
-uvicorn fastapi_app:app --app-dir src/ml-service --host 127.0.0.1 --port 8000 --reload
-```
-
-Or run both FastAPI and Next.js together from the project root:
-
-```bash
-npm run dev:all
-```
-
-3. Optional: set a custom ML service URL for Next.js:
-
-```bash
-ML_SERVICE_URL=http://127.0.0.1:8000
-```
-
-The Next.js API route at `src/app/api/disease-detect/route.ts` will call `${ML_SERVICE_URL}/predict`.
-
-## Required Environment Variables
-
-Disease scan results are now persisted to MongoDB, and uploaded images are stored in Cloudinary.
-
-Set these in `.env.local`:
+Set these variables in your local environment:
 
 ```bash
 MONGODB_URI=your_mongodb_connection_string
@@ -43,40 +75,67 @@ ML_SERVICE_URL=http://127.0.0.1:8000
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
+PUSHER_APP_ID=your_pusher_app_id
+NEXT_PUBLIC_PUSHER_KEY=your_pusher_key
+PUSHER_SECRET=your_pusher_secret
+NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
+
+OFFICER_ADMIN_PASSWORD=your_officer_admin_password
 ```
 
-## Getting Started
+If you are using Clerk, set the required Clerk environment variables from your dashboard.
 
-First, run the development server:
+### Start the ML Service
+
+```bash
+pip install -r src/ml-service/requirements.txt
+uvicorn fastapi_app:app --app-dir src/ml-service --host 127.0.0.1 --port 8000 --reload
+```
+
+### Start the Web App
 
 ```bash
 npm run dev
-npm run dev:all
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Run Web + ML Together
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev:all
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open http://localhost:3000 in your browser.
 
-## Learn More
+## API Routes (High Level)
 
-To learn more about Next.js, take a look at the following resources:
+- `POST /api/disease-detect` - run a rice leaf disease scan
+- `GET /api/notifications` - fetch notification history
+- `GET /api/market-prices` - list market prices
+- `GET /api/chat` - list or send messages
+- `POST /api/webhooks/clerk` - Clerk webhooks
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See [src/app/api](src/app/api) for full route definitions.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Testing
 
-## Deploy on Vercel
+```bash
+npm run test
+npm run test:unit
+npm run test:integration
+npm run test:components
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Team
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Final-year project developed by Kavishka Igalagama under the supervision of Ms. Dulanjali Wijesekara (NSBM partnership with Plymouth University).
+
+## License
+
+Academic project. All rights reserved.
+
+## Acknowledgments
+
+Thanks to academic supervisors, local rice sector partners, and the open source community.
+
+This project is a final year submission for Plymouth University, Plymouth batch 12.
