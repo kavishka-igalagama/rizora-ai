@@ -65,7 +65,7 @@ describe("Model Tests - DiseaseScan", () => {
         "Rice Bacterial Blight",
         "Rice Brown Spots",
         "Rice Leaf Blast",
-        "Rice Leaf Scald",
+        "Rice Leaf Scaled",
         "Rice Leaf Smut",
         "Rice Sheath Blight",
         "Rice Tungro",

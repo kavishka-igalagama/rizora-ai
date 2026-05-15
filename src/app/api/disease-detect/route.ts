@@ -49,7 +49,7 @@ const TREATMENT_BY_DISEASE: Record<string, string[]> = {
     "Use resistant rice varieties when available.",
   ],
 
-  "Rice Leaf Scald": [
+  "Rice Leaf Scaled": [
     "Remove infected plant debris after harvesting.",
     "Ensure good field aeration and avoid overcrowding.",
     "Apply recommended fungicides if disease severity increases.",
