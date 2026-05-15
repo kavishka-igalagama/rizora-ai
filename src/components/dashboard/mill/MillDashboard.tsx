@@ -106,7 +106,7 @@ const getCollectionStatusBadgeClass = (
   return styles[status];
 };
 
-const MillDashboard = ({ _userName, millName }: MillDashboardProps) => {
+const MillDashboard = ({ userName, millName }: MillDashboardProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [pricings, setPricings] = useState<PricingEntry[]>([]);
   const [collections, setCollections] = useState<CollectionEntry[]>([]);
