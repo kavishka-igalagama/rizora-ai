@@ -9,8 +9,8 @@ export interface IPricing extends Document {
   pricePerKg: number;
   isActive: boolean;
   notes?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const PricingSchema: Schema<IPricing> = new Schema(
