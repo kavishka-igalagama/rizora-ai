@@ -21,7 +21,7 @@ const config: Config = {
     "!src/**/*.stories.{js,jsx,ts,tsx}",
     "!src/ml-service/**",
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 50,
       functions: 50,
